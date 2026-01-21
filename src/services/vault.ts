@@ -16,7 +16,9 @@ import type {
   TherapistGuidance,
   JournalTag,
   MetricsConfig,
-  AppSettings
+  AppSettings,
+  ActivityLog,
+  WidgetId
 } from '@/types'
 import { DEFAULT_METRICS } from '@/types'
 import {
@@ -480,6 +482,100 @@ export async function saveMetricsConfig(config: MetricsConfig): Promise<void> {
     data: encrypted,
     updatedAt: Date.now()
   })
+}
+
+// ============================================
+// Activity Logs
+// ============================================
+
+/**
+ * Log an activity completion
+ */
+export async function logActivity(activityId: WidgetId, durationSeconds?: number, result?: Record<string, unknown>): Promise<void> {
+  const { key, salt } = requireUnlocked()
+  const db = getDatabase()
+
+  const log: ActivityLog = {
+    id: crypto.randomUUID(),
+    activityId,
+    completedAt: Date.now(),
+    durationSeconds,
+    result
+  }
+
+  const encrypted = await encryptObject(log, key, salt)
+  await db.activityLogs.put({
+    id: log.id,
+    activityId: log.activityId,
+    completedAt: log.completedAt,
+    data: encrypted
+  })
+}
+
+/**
+ * Get activity logs for a specific activity
+ */
+export async function getActivityLogs(activityId: WidgetId, limit = 10): Promise<ActivityLog[]> {
+  const { key } = requireUnlocked()
+  const db = getDatabase()
+
+  const entries = await db.activityLogs
+    .where('activityId')
+    .equals(activityId)
+    .reverse()
+    .sortBy('completedAt')
+
+  const logs: ActivityLog[] = []
+  for (const entry of entries.slice(0, limit)) {
+    try {
+      const decrypted = await decryptObject<ActivityLog>(entry.data, key)
+      logs.push(decrypted)
+    } catch (e) {
+      console.error('Failed to decrypt activity log:', e)
+    }
+  }
+
+  return logs
+}
+
+/**
+ * Get the most recent activity log for each activity type
+ */
+export async function getLastActivityTimes(): Promise<Record<WidgetId, number>> {
+  requireUnlocked()
+  const db = getDatabase()
+
+  const result: Partial<Record<WidgetId, number>> = {}
+
+  // Get all logs and find the most recent for each activity
+  const entries = await db.activityLogs.toArray()
+
+  for (const entry of entries) {
+    const activityId = entry.activityId as WidgetId
+    if (!result[activityId] || entry.completedAt > result[activityId]!) {
+      result[activityId] = entry.completedAt
+    }
+  }
+
+  return result as Record<WidgetId, number>
+}
+
+/**
+ * Get the count of completions for each activity
+ */
+export async function getActivityCounts(): Promise<Record<WidgetId, number>> {
+  const db = getDatabase()
+
+  const result: Partial<Record<WidgetId, number>> = {}
+
+  const entries = await db.activityLogs.toArray()
+
+  for (const entry of entries) {
+    const activityId = entry.activityId as WidgetId
+    result[activityId] = (result[activityId] || 0) + 1
+  }
+
+  return result as Record<WidgetId, number>
 }
 
 // ============================================

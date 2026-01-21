@@ -201,6 +201,15 @@ export function useVault() {
   }
 
   // ============================================
+  // Activity Log Operations
+  // ============================================
+
+  const logActivity = vault.logActivity
+  const getActivityLogs = vault.getActivityLogs
+  const getLastActivityTimes = vault.getLastActivityTimes
+  const getActivityCounts = vault.getActivityCounts
+
+  // ============================================
   // Export Operations
   // ============================================
 
@@ -340,6 +349,12 @@ export function useVault() {
     // Metrics Config
     getMetricsConfig,
     saveMetricsConfig,
+
+    // Activity Logs
+    logActivity,
+    getActivityLogs,
+    getLastActivityTimes,
+    getActivityCounts,
 
     // Export
     exportBackup,

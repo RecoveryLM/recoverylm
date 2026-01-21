@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  Save,
   ShieldAlert,
   Scale,
   Columns2,
@@ -30,17 +29,19 @@ import StoicWidget from '@/components/widgets/StoicWidget.vue'
 import EvidenceWidget from '@/components/widgets/EvidenceWidget.vue'
 import UrgeSurfWidget from '@/components/widgets/UrgeSurfWidget.vue'
 import CheckinWidget from '@/components/widgets/CheckinWidget.vue'
+import CrisisQuickAccess from '@/components/CrisisQuickAccess.vue'
 
 const router = useRouter()
 const route = useRoute()
-const { getMetrics, getMetricForDate, saveMetric, getMetricsConfig } = useVault()
+const { getMetrics, getMetricForDate, saveMetric, getMetricsConfig, logActivity, getLastActivityTimes } = useVault()
 const { setResult } = useActivityResult()
 
-// Loading and save states
+// Loading state
 const isLoading = ref(true)
-const isSaving = ref(false)
-const saveSuccess = ref(false)
 const enabledMetrics = ref<MetricDefinition[]>([])
+
+// Activity usage tracking
+const lastActivityTimes = ref<Record<string, number>>({})
 
 // Default metric IDs that map to DailyMetric properties
 const defaultMetricIds = ['sobrietyMaintained', 'exercise', 'meditation', 'study', 'healthyEating', 'connectionTime', 'cbtPractice']
@@ -79,6 +80,53 @@ const sortedBooleanMetrics = computed(() => {
     return aComplete ? 1 : -1
   })
 })
+
+// Count of completed metrics
+const completedCount = computed(() => {
+  return booleanMetrics.value.filter(m => isMetricComplete(m.id)).length
+})
+
+// Progress percentage for circular indicator
+const progressPercent = computed(() => {
+  if (booleanMetrics.value.length === 0) return 0
+  return Math.round((completedCount.value / booleanMetrics.value.length) * 100)
+})
+
+// Motivational message based on progress
+const progressMessage = computed(() => {
+  const percent = progressPercent.value
+  if (percent === 100) return 'All habits completed! Great work.'
+  if (percent >= 75) return 'Almost there, keep going!'
+  if (percent >= 50) return "Halfway through today's habits"
+  if (percent > 0) return 'Good start, keep building momentum'
+  return 'Start tracking your day'
+})
+
+// SVG circle properties for progress ring
+const circleRadius = 40
+const circleCircumference = 2 * Math.PI * circleRadius
+const progressOffset = computed(() => {
+  return circleCircumference - (progressPercent.value / 100) * circleCircumference
+})
+
+// Format relative time for activity last used
+const getLastUsedText = (activityId: string): string | null => {
+  const timestamp = lastActivityTimes.value[activityId]
+  if (!timestamp) return null
+
+  const now = Date.now()
+  const diff = now - timestamp
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (days === 0) return 'Last: today'
+  if (days === 1) return 'Last: yesterday'
+  if (days < 7) return `Last: ${days} days ago`
+  if (days < 30) {
+    const weeks = Math.floor(days / 7)
+    return `Last: ${weeks} week${weeks > 1 ? 's' : ''} ago`
+  }
+  return `Last: ${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`
+}
 
 // Calculate streak for each metric
 const getStreakForMetric = (metricId: string): number => {
@@ -121,10 +169,25 @@ const setMetricValue = (metricId: string, value: boolean | number) => {
   }
 }
 
-// Format date for display
+// Format date for display with Today/Yesterday labels
 const formatDisplayDate = (dateStr: string): string => {
+  const todayStr = today()
+  if (dateStr === todayStr) return 'Today'
+
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (dateStr === formatDate(yesterday)) return 'Yesterday'
+
   const date = new Date(dateStr + 'T12:00:00')
   return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+// Check if currently viewing today
+const isViewingToday = computed(() => selectedDate.value === today())
+
+// Go to today
+const goToToday = () => {
+  selectedDate.value = today()
 }
 
 // Date navigation
@@ -182,6 +245,9 @@ onMounted(async () => {
     // Load last 30 days for streaks
     historicalMetrics.value = await getMetrics({ limit: 30 })
 
+    // Load activity usage data
+    lastActivityTimes.value = await getLastActivityTimes()
+
     // Handle deep link to specific activity
     const activityId = route.query.activity as string
     if (activityId) {
@@ -229,32 +295,40 @@ const saveMetricsQuietly = async () => {
   }
 }
 
-const saveMetrics = async () => {
-  isSaving.value = true
-  saveSuccess.value = false
+// Activity Library configuration
+type ActivityCategory = 'crisis' | 'daily' | 'reflection'
 
-  try {
-    await saveMetric(currentMetrics.value)
-    historicalMetrics.value = await getMetrics({ limit: 30 })
-    saveSuccess.value = true
-    setTimeout(() => {
-      saveSuccess.value = false
-    }, 3000)
-  } catch (error) {
-    console.error('Failed to save metrics:', error)
-  } finally {
-    isSaving.value = false
-  }
+interface ActivityCategoryInfo {
+  id: ActivityCategory
+  label: string
+  colorClass: string
+  iconColorClass: string
 }
 
-// Activity Library configuration
+const categoryInfo: Record<ActivityCategory, ActivityCategoryInfo> = {
+  crisis: { id: 'crisis', label: 'Crisis Intervention', colorClass: 'border-amber-500/30', iconColorClass: 'text-amber-400' },
+  daily: { id: 'daily', label: 'Daily Practice', colorClass: 'border-emerald-500/30', iconColorClass: 'text-emerald-400' },
+  reflection: { id: 'reflection', label: 'Reflection', colorClass: 'border-indigo-500/30', iconColorClass: 'text-indigo-400' }
+}
+
+type ModalSize = 'sm' | 'md' | 'lg'
+
 interface Activity {
   id: WidgetId
   name: string
   description: string
+  whenToUse: string
+  category: ActivityCategory
+  modalSize: ModalSize
   icon: Component
   component: Component
   defaultParams: Record<string, unknown>
+}
+
+const modalSizeClasses: Record<ModalSize, string> = {
+  sm: 'max-w-md',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl'
 }
 
 const activities: Activity[] = [
@@ -262,6 +336,9 @@ const activities: Activity[] = [
     id: 'W_CHECKIN',
     name: 'Daily Check-In',
     description: 'Track your mood, habits, and sobriety for today',
+    whenToUse: 'Use daily to track progress',
+    category: 'daily',
+    modalSize: 'md',
     icon: ClipboardCheck,
     component: CheckinWidget,
     defaultParams: {}
@@ -270,6 +347,9 @@ const activities: Activity[] = [
     id: 'W_DENTS',
     name: 'DENTS Protocol',
     description: 'A 10-minute technique to manage urges',
+    whenToUse: 'Use when you feel an urge building',
+    category: 'crisis',
+    modalSize: 'md',
     icon: ShieldAlert,
     component: DentsWidget,
     defaultParams: { trigger: 'current moment', intensity: 5 }
@@ -278,6 +358,9 @@ const activities: Activity[] = [
     id: 'W_TAPE',
     name: 'Play the Tape Forward',
     description: 'Visualize consequences before acting',
+    whenToUse: 'Use before making impulsive decisions',
+    category: 'crisis',
+    modalSize: 'lg',
     icon: FastForward,
     component: TapeWidget,
     defaultParams: { trigger: '' }
@@ -286,6 +369,9 @@ const activities: Activity[] = [
     id: 'W_EVIDENCE',
     name: 'Evaluation of Evidence',
     description: 'Challenge negative thoughts with CBT techniques',
+    whenToUse: 'Use when negative thoughts feel overwhelming',
+    category: 'reflection',
+    modalSize: 'md',
     icon: Scale,
     component: EvidenceWidget,
     defaultParams: { thought: '' }
@@ -294,6 +380,9 @@ const activities: Activity[] = [
     id: 'W_STOIC',
     name: 'Dichotomy of Control',
     description: 'Sort what you can and cannot control',
+    whenToUse: 'Use when feeling anxious about outcomes',
+    category: 'reflection',
+    modalSize: 'md',
     icon: Columns2,
     component: StoicWidget,
     defaultParams: { situation: '' }
@@ -302,11 +391,28 @@ const activities: Activity[] = [
     id: 'W_URGESURF',
     name: 'Urge Surfing',
     description: 'Guided meditation to ride out urges',
+    whenToUse: 'Use when craving intensity is high',
+    category: 'crisis',
+    modalSize: 'lg',
     icon: Waves,
     component: UrgeSurfWidget,
     defaultParams: { duration: 300 }
   }
 ]
+
+// Group activities by category
+const activitiesByCategory = computed(() => {
+  const grouped: Record<ActivityCategory, Activity[]> = {
+    crisis: [],
+    daily: [],
+    reflection: []
+  }
+  activities.forEach(a => grouped[a.category].push(a))
+  return grouped
+})
+
+// Category display order
+const categoryOrder: ActivityCategory[] = ['crisis', 'daily', 'reflection']
 
 // Modal state
 const activeActivity = ref<Activity | null>(null)
@@ -319,15 +425,33 @@ const openActivity = (activity: Activity) => {
   activityResult.value = null
 }
 
+const openActivityById = (activityId: WidgetId) => {
+  const activity = activities.find(a => a.id === activityId)
+  if (activity) {
+    openActivity(activity)
+  }
+}
+
 const closeActivity = () => {
   activeActivity.value = null
   activityCompleted.value = false
   activityResult.value = null
 }
 
-const handleActivityComplete = (result: unknown) => {
+const handleActivityComplete = async (result: unknown) => {
   activityCompleted.value = true
   activityResult.value = result
+
+  // Log the activity completion
+  if (activeActivity.value) {
+    try {
+      await logActivity(activeActivity.value.id, undefined, result as Record<string, unknown> | undefined)
+      // Refresh last activity times
+      lastActivityTimes.value = await getLastActivityTimes()
+    } catch (error) {
+      console.error('Failed to log activity:', error)
+    }
+  }
 }
 
 const discussWithRemi = () => {
@@ -360,23 +484,76 @@ const discussWithRemi = () => {
         <div class="flex items-center gap-2">
           <button
             @click="navigateDate(-1)"
+            aria-label="Go to previous day"
             class="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
           >
             <ChevronLeft :size="20" />
           </button>
-          <div class="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg min-w-[180px] justify-center">
+          <button
+            @click="goToToday"
+            :disabled="isViewingToday"
+            :aria-label="isViewingToday ? 'Viewing today' : 'Click to go to today'"
+            class="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg min-w-[180px] justify-center transition-colors"
+            :class="isViewingToday ? 'cursor-default' : 'hover:border-indigo-500 cursor-pointer'"
+          >
             <Calendar :size="16" class="text-indigo-400" />
             <span class="text-sm font-mono text-white">{{ formatDisplayDate(selectedDate) }}</span>
-          </div>
+          </button>
           <button
             @click="navigateDate(1)"
             :disabled="!canGoForward"
+            aria-label="Go to next day"
             class="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight :size="20" />
           </button>
         </div>
       </div>
+
+      <!-- Crisis Quick Access -->
+      <CrisisQuickAccess @open-activity="openActivityById" />
+
+      <!-- Daily Progress Summary -->
+      <section class="flex items-center gap-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+        <!-- Circular Progress -->
+        <div class="relative flex-shrink-0">
+          <svg width="100" height="100" class="transform -rotate-90">
+            <!-- Background circle -->
+            <circle
+              :r="circleRadius"
+              cx="50"
+              cy="50"
+              fill="transparent"
+              stroke="currentColor"
+              stroke-width="8"
+              class="text-slate-700"
+            />
+            <!-- Progress circle -->
+            <circle
+              :r="circleRadius"
+              cx="50"
+              cy="50"
+              fill="transparent"
+              stroke="currentColor"
+              stroke-width="8"
+              stroke-linecap="round"
+              :stroke-dasharray="circleCircumference"
+              :stroke-dashoffset="progressOffset"
+              class="text-emerald-500 transition-all duration-500"
+            />
+          </svg>
+          <!-- Center text -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-2xl font-bold text-white">{{ completedCount }}</span>
+            <span class="text-xs text-slate-400">/{{ booleanMetrics.length }}</span>
+          </div>
+        </div>
+        <!-- Message -->
+        <div class="flex-1 min-w-0">
+          <p class="text-white font-medium">{{ progressMessage }}</p>
+          <p class="text-sm text-slate-400 mt-1">{{ progressPercent }}% of daily habits</p>
+        </div>
+      </section>
 
       <!-- Section 1: The Register -->
       <section>
@@ -401,6 +578,9 @@ const discussWithRemi = () => {
             <!-- Right: Large Toggle -->
             <button
               @click="toggleMetric(metric.id)"
+              :aria-label="`${metric.label}: ${isMetricComplete(metric.id) ? 'completed' : 'not completed'}`"
+              :aria-pressed="isMetricComplete(metric.id)"
+              role="switch"
               class="w-16 h-10 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer"
               :class="isMetricComplete(metric.id)
                 ? 'bg-emerald-500 border-emerald-500 text-white'
@@ -411,38 +591,60 @@ const discussWithRemi = () => {
           </div>
         </div>
 
-        <!-- Complete Check-in Button -->
-        <button
-          @click="saveMetrics"
-          :disabled="isSaving"
-          class="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors"
-          :class="saveSuccess
-            ? 'bg-emerald-600 text-white'
-            : 'bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white'"
-        >
-          <Save v-if="!saveSuccess" :size="18" />
-          <CheckCircle2 v-else :size="18" />
-          {{ isSaving ? 'Saving...' : saveSuccess ? 'Check-in Complete!' : 'Complete Check-in' }}
-        </button>
+        <!-- Progress Footer -->
+        <div class="mt-4 flex items-center justify-between px-4 py-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+          <span class="text-sm text-slate-400">
+            Quick log: <span class="text-white font-medium">{{ completedCount }}/{{ booleanMetrics.length }}</span> completed
+          </span>
+          <button
+            @click="openActivity(activities.find(a => a.id === 'W_CHECKIN')!)"
+            class="text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
+            Full check-in →
+          </button>
+        </div>
       </section>
 
       <!-- Section 2: Activity Library -->
-      <section>
-        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Activity Library</h2>
-        <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            v-for="activity in activities"
-            :key="activity.id"
-            @click="openActivity(activity)"
-            class="p-4 rounded-lg bg-slate-800 border border-slate-700 text-left transition-all hover:border-indigo-500 hover:bg-slate-800/80"
-          >
-            <div class="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center mb-3">
-              <component :is="activity.icon" :size="20" class="text-indigo-400" />
-            </div>
-            <div class="font-semibold text-white text-sm">{{ activity.name }}</div>
-            <p class="text-slate-400 text-xs mt-1 line-clamp-2">{{ activity.description }}</p>
-            <div class="text-indigo-400 text-xs font-medium mt-3">Launch →</div>
-          </button>
+      <section class="space-y-6">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Activity Library</h2>
+
+        <!-- Grouped by Category -->
+        <div
+          v-for="catId in categoryOrder"
+          :key="catId"
+          class="space-y-3"
+        >
+          <h3 class="text-xs font-medium text-slate-400 flex items-center gap-2">
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="{
+                'bg-amber-400': catId === 'crisis',
+                'bg-emerald-400': catId === 'daily',
+                'bg-indigo-400': catId === 'reflection'
+              }"
+            ></span>
+            {{ categoryInfo[catId].label }}
+          </h3>
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <button
+              v-for="activity in activitiesByCategory[catId]"
+              :key="activity.id"
+              @click="openActivity(activity)"
+              class="p-4 rounded-lg bg-slate-800 border text-left transition-all hover:bg-slate-800/80"
+              :class="[categoryInfo[catId].colorClass, `hover:${categoryInfo[catId].colorClass.replace('/30', '/60')}`]"
+            >
+              <div class="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center mb-3">
+                <component :is="activity.icon" :size="20" :class="categoryInfo[catId].iconColorClass" />
+              </div>
+              <div class="font-semibold text-white text-sm">{{ activity.name }}</div>
+              <p class="text-slate-400 text-xs mt-1 line-clamp-2">{{ activity.description }}</p>
+              <p class="text-slate-500 text-xs mt-2 italic">{{ activity.whenToUse }}</p>
+              <p v-if="getLastUsedText(activity.id)" class="text-slate-600 text-xs mt-1 font-mono">
+                {{ getLastUsedText(activity.id) }}
+              </p>
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -462,7 +664,10 @@ const discussWithRemi = () => {
           class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
           @click.self="closeActivity"
         >
-          <div class="bg-slate-900 rounded-xl border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div
+            class="bg-slate-900 rounded-xl border border-slate-700 w-full max-h-[90vh] overflow-y-auto"
+            :class="modalSizeClasses[activeActivity.modalSize]"
+          >
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-slate-700">
               <h2 class="text-lg font-semibold text-white flex items-center gap-2">

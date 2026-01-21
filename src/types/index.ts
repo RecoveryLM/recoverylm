@@ -252,6 +252,18 @@ export interface NetworkWidgetParams {
 }
 
 // ============================================
+// Activity Tracking
+// ============================================
+
+export interface ActivityLog {
+  id: string
+  activityId: WidgetId
+  completedAt: number
+  durationSeconds?: number // How long the activity took
+  result?: Record<string, unknown> // Optional activity-specific result data
+}
+
+// ============================================
 // Chat & Messaging
 // ============================================
 
