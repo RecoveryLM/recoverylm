@@ -394,14 +394,11 @@ const handleNewChat = () => {
       </template>
 
       <!-- Thinking Indicator (shows during agentic loop with tool info) -->
-      <div v-if="isLoading && !isStreaming && agentState.loopState !== 'idle'" class="flex justify-start items-start gap-3">
+      <div v-if="isLoading && !isStreaming && agentState.status !== 'idle'" class="flex justify-start items-start gap-3">
         <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex-shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-lg">
           R
         </div>
-        <ThinkingIndicator
-          :state="agentState.loopState"
-          :current-tool="agentState.currentTool"
-        />
+        <ThinkingIndicator :state="agentState" />
       </div>
 
       <!-- Typing Indicator (fallback for non-agentic loading) -->

@@ -327,10 +327,11 @@ export class AnthropicProvider implements InferenceProvider {
     // Recent metrics summary
     if (context.recentMetrics.length > 0) {
       const metrics = context.recentMetrics.slice(0, 7)
+      const soberDays = metrics.filter(m => m.sobrietyMaintained).length
       const exerciseDays = metrics.filter(m => m.exercise).length
       const meditationDays = metrics.filter(m => m.meditation).length
       const avgMood = metrics.reduce((sum, m) => sum + m.moodScore, 0) / metrics.length
-      contextSections.push(`## Recent Metrics (last ${metrics.length} days)\n- Exercise: ${exerciseDays}/${metrics.length} days\n- Meditation: ${meditationDays}/${metrics.length} days\n- Average mood: ${avgMood.toFixed(1)}/10`)
+      contextSections.push(`## Recent Metrics (last ${metrics.length} days)\n- Sober: ${soberDays}/${metrics.length} days\n- Exercise: ${exerciseDays}/${metrics.length} days\n- Meditation: ${meditationDays}/${metrics.length} days\n- Average mood: ${avgMood.toFixed(1)}/10`)
     }
 
     // Crisis context injection

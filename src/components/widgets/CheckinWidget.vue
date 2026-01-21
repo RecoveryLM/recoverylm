@@ -169,9 +169,9 @@ const complete = async () => {
 
         <div class="text-left space-y-2 p-3 bg-slate-800/50 rounded-lg mb-4">
           <div v-if="showSobriety" class="flex justify-between text-sm">
-            <span class="text-slate-400">Sobriety:</span>
+            <span class="text-slate-400">Sober:</span>
             <span :class="metric.sobrietyMaintained ? 'text-emerald-400' : 'text-red-400'">
-              {{ metric.sobrietyMaintained ? 'Maintained' : 'Struggled' }}
+              {{ metric.sobrietyMaintained ? 'Yes' : 'No' }}
             </span>
           </div>
           <div class="flex justify-between text-sm">
@@ -203,7 +203,7 @@ const complete = async () => {
     <div v-if="!isLoading && !isComplete" class="space-y-4">
       <!-- Sobriety -->
       <div v-if="showSobriety">
-        <label class="text-xs text-slate-400 block mb-2">Sobriety Today</label>
+        <label class="text-xs text-slate-400 block mb-2">Sober Today?</label>
         <div class="flex gap-2">
           <button
             @click="metric.sobrietyMaintained = true"
@@ -212,7 +212,7 @@ const complete = async () => {
               ? 'bg-emerald-900/30 border-emerald-500/50 text-emerald-400'
               : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500'"
           >
-            Maintained
+            Yes
           </button>
           <button
             @click="metric.sobrietyMaintained = false"
@@ -221,7 +221,7 @@ const complete = async () => {
               ? 'bg-red-900/30 border-red-500/50 text-red-400'
               : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500'"
           >
-            Struggled
+            No
           </button>
         </div>
       </div>

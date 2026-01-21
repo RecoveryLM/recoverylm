@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AgentLoopState } from '@/types/agent'
+import type { AgentLoopState } from '@/agent'
 
 const props = defineProps<{
   state: AgentLoopState
-  currentTool: string | null
 }>()
 
 /**
@@ -17,15 +16,17 @@ const toolDescriptions: Record<string, string> = {
 }
 
 const displayMessage = computed(() => {
-  switch (props.state) {
+  switch (props.state.status) {
     case 'thinking':
     case 'continuing':
       return 'Thinking...'
-    case 'tool_executing':
-      if (props.currentTool && toolDescriptions[props.currentTool]) {
-        return toolDescriptions[props.currentTool] + '...'
+    case 'tool_executing': {
+      const toolName = props.state.toolName
+      if (toolName && toolDescriptions[toolName]) {
+        return toolDescriptions[toolName] + '...'
       }
       return 'Processing...'
+    }
     case 'streaming':
       return null // Don't show indicator while streaming text
     default:
@@ -34,9 +35,10 @@ const displayMessage = computed(() => {
 })
 
 const shouldShow = computed(() => {
-  return props.state !== 'idle' &&
-         props.state !== 'streaming' &&
-         props.state !== 'complete'
+  return props.state.status !== 'idle' &&
+         props.state.status !== 'streaming' &&
+         props.state.status !== 'complete' &&
+         props.state.status !== 'error'
 })
 </script>
 
@@ -50,7 +52,6 @@ const shouldShow = computed(() => {
       <span class="thinking-dot w-2 h-2 bg-emerald-400 rounded-full"></span>
       <span class="thinking-dot w-2 h-2 bg-emerald-400 rounded-full"></span>
     </span>
-    <span class="text-sm">{{ displayMessage }}</span>
   </div>
 </template>
 
