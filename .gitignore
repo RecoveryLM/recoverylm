@@ -30,3 +30,6 @@ dev-dist/
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Private docs
+.docs/
