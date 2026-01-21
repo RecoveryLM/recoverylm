@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Custom CSS variables for the command center aesthetic */
+  :root {
+    --canvas: 2 6 23;           /* slate-950 RGB */
+    --surface-1: 15 23 42;      /* slate-900 RGB */
+    --surface-2: 30 41 59;      /* slate-800 RGB */
+    --border: 51 65 85;         /* slate-700 RGB */
+  }
+
+  /* Ensure full height on mobile */
+  html, body, #app {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: rgb(79 70 229 / 0.3); /* indigo-600/30 */
+  }
+
+  /* Scrollbar styling for the dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgb(15 23 42); /* slate-900 */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(51 65 85); /* slate-700 */
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(71 85 105); /* slate-600 */
+  }
+
+  /* Focus ring for accessibility */
+  *:focus-visible {
+    outline: 2px solid rgb(79 70 229); /* indigo-600 */
+    outline-offset: 2px;
+  }
+
+  /* Disable focus ring for mouse users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer components {
+  /* Chat bubble animations */
+  .chat-bubble-enter {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  /* Typing indicator dots */
+  .typing-dot {
+    animation: typingPulse 1.4s infinite ease-in-out both;
+  }
+
+  .typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+
+  @keyframes typingPulse {
+    0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Widget container styling */
+  .widget-container {
+    @apply bg-slate-800 border border-indigo-500/30 rounded-lg shadow-lg;
+  }
+
+  /* Crisis modal overlay */
+  .crisis-overlay {
+    @apply fixed inset-0 bg-black/90 z-50 flex items-center justify-center;
+  }
+}
+
+@layer utilities {
+  /* Safe area padding for mobile notches */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
