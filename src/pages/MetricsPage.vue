@@ -4,12 +4,16 @@ import {
   Activity,
   Calendar,
   TrendingUp,
+  TrendingDown,
+  Minus,
   FileText,
-  Filter
+  Filter,
+  ClipboardCheck
 } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
 import { formatDate, DEFAULT_METRICS } from '@/types'
 import type { DailyMetric, MetricDefinition, JournalEntry } from '@/types'
+import DayDetailModal from '@/components/DayDetailModal.vue'
 
 const { getMetrics, getMetricsConfig, getJournalEntries } = useVault()
 
@@ -36,6 +40,17 @@ const getDaysForRange = (range: DateRange): number => {
     case 'year': return 365
   }
 }
+
+// Date range label with actual dates
+const dateRangeLabel = computed(() => {
+  const days = getDaysForRange(selectedRange.value)
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - (days - 1))
+
+  const fmt: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+  return `${startDate.toLocaleDateString('en-US', fmt)} - ${endDate.toLocaleDateString('en-US', fmt)}`
+})
 
 // Default metric IDs
 const defaultMetricIds = ['sobrietyMaintained', 'exercise', 'meditation', 'study', 'healthyEating', 'connectionTime', 'cbtPractice']
@@ -104,6 +119,23 @@ const getCompletionRate = (metricId: string): number => {
   return Math.round((successDays / daysWithData.length) * 100)
 }
 
+// Calculate trend for a metric (comparing last 7 days vs previous 7 days)
+const getMetricTrend = (metricId: string): 'up' | 'down' | 'stable' => {
+  const heatmap = getHeatmapForMetric(metricId)
+  const daysWithData = heatmap.filter(d => d.hasData)
+  if (daysWithData.length < 14) return 'stable'
+
+  const recent = daysWithData.slice(-7)
+  const previous = daysWithData.slice(-14, -7)
+  const recentRate = recent.filter(d => d.success).length / recent.length
+  const previousRate = previous.filter(d => d.success).length / previous.length
+
+  const diff = recentRate - previousRate
+  if (diff > 0.1) return 'up'
+  if (diff < -0.1) return 'down'
+  return 'stable'
+}
+
 // Mood data for chart
 const moodData = computed(() => {
   const days = getDaysForRange(selectedRange.value)
@@ -139,6 +171,42 @@ const formatDisplayDate = (dateStr: string): string => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+// Day detail modal state
+const selectedDay = ref<{ date: string; metric: DailyMetric | null } | null>(null)
+const showDayModal = ref(false)
+
+const openDayDetail = (dateStr: string) => {
+  const metric = historicalMetrics.value.find(m => m.date === dateStr) ?? null
+  selectedDay.value = { date: dateStr, metric }
+  showDayModal.value = true
+}
+
+const closeDayModal = () => {
+  showDayModal.value = false
+  selectedDay.value = null
+}
+
+// Mobile touch tooltip state
+const touchedCell = ref<{ date: string; x: number; y: number; success: boolean; hasData: boolean } | null>(null)
+
+const handleCellTouch = (e: TouchEvent, day: { date: string; success: boolean; hasData: boolean }) => {
+  e.preventDefault()
+  const touch = e.touches[0]
+  // Clamp x position to keep tooltip on screen
+  const clampedX = Math.min(touch.clientX, window.innerWidth - 150)
+  touchedCell.value = { date: day.date, x: clampedX, y: touch.clientY, success: day.success, hasData: day.hasData }
+  setTimeout(() => { touchedCell.value = null }, 2000)
+}
+
+// Get cell pattern style for accessibility
+const getCellStyle = (day: { success: boolean; hasData: boolean }) => {
+  if (!day.hasData) return {}
+  if (day.success) {
+    return { backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)`, backgroundSize: '4px 4px' }
+  }
+  return { backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px)` }
+}
+
 // Log filter
 const logFilter = ref<string>('all')
 const logFilterOptions = ['all', 'user', 'assistant']
@@ -147,6 +215,11 @@ const logFilterOptions = ['all', 'user', 'assistant']
 const filteredEntries = computed(() => {
   if (logFilter.value === 'all') return journalEntries.value
   return journalEntries.value.filter(e => e.entryType === logFilter.value)
+})
+
+// Check if we have any tracking data
+const hasTrackingData = computed(() => {
+  return booleanMetrics.value.length > 0 && historicalMetrics.value.length > 0
 })
 
 // Load data
@@ -193,23 +266,43 @@ onMounted(async () => {
         </div>
 
         <!-- Date Range Picker -->
-        <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
-          <button
-            v-for="option in rangeOptions"
-            :key="option.value"
-            @click="selectedRange = option.value"
-            class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            :class="selectedRange === option.value
-              ? 'bg-indigo-600 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-slate-700'"
-          >
-            {{ option.label }}
-          </button>
+        <div class="flex flex-col items-end gap-1">
+          <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
+            <button
+              v-for="option in rangeOptions"
+              :key="option.value"
+              @click="selectedRange = option.value"
+              class="px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              :class="selectedRange === option.value
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">{{ dateRangeLabel }}</span>
         </div>
       </div>
 
+      <!-- Empty State -->
+      <div v-if="!hasTrackingData" class="bg-slate-800 rounded-lg border border-slate-700 p-8 text-center">
+        <div class="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <ClipboardCheck :size="32" class="text-slate-500" />
+        </div>
+        <h2 class="text-lg font-semibold text-white mb-2">No Tracking Data Yet</h2>
+        <p class="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+          Start tracking your recovery progress by completing a daily check-in with Remi. Your habits, mood, and progress will appear here.
+        </p>
+        <router-link
+          to="/chat"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition-colors"
+        >
+          Start Your First Check-in
+        </router-link>
+      </div>
+
       <!-- Section 1: Streak Heatmaps -->
-      <section>
+      <section v-if="hasTrackingData">
         <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4 flex items-center gap-2">
           <Calendar :size="16" />
           Streak Heatmaps
@@ -230,8 +323,12 @@ onMounted(async () => {
                 <span class="text-slate-400">
                   <span class="text-emerald-400 font-mono font-bold">{{ getStreakForMetric(metric.id) }}</span> day streak
                 </span>
-                <span class="text-slate-400">
-                  <span class="text-indigo-400 font-mono font-bold">{{ getCompletionRate(metric.id) }}%</span> completion
+                <span class="text-slate-400 flex items-center gap-1">
+                  <span class="text-indigo-400 font-mono font-bold">{{ getCompletionRate(metric.id) }}%</span>
+                  <!-- Trend indicator -->
+                  <TrendingUp v-if="getMetricTrend(metric.id) === 'up'" :size="14" class="text-emerald-400" />
+                  <TrendingDown v-else-if="getMetricTrend(metric.id) === 'down'" :size="14" class="text-red-400" />
+                  <Minus v-else :size="14" class="text-slate-500" />
                 </span>
               </div>
             </div>
@@ -242,13 +339,16 @@ onMounted(async () => {
                 v-for="(day, index) in getHeatmapForMetric(metric.id)"
                 :key="index"
                 :title="`${formatDisplayDate(day.date)}: ${day.success ? 'Completed' : day.hasData ? 'Missed' : 'No data'}`"
-                class="w-3 h-3 rounded-sm transition-colors"
+                class="w-4 h-4 rounded-sm transition-all cursor-pointer hover:ring-2 hover:ring-indigo-400/50"
                 :class="{
                   'bg-emerald-500': day.success,
                   'bg-red-900': day.hasData && !day.success && metric.id === 'sobrietyMaintained',
                   'bg-slate-600': day.hasData && !day.success && metric.id !== 'sobrietyMaintained',
                   'bg-slate-700/50': !day.hasData
                 }"
+                :style="getCellStyle(day)"
+                @click="openDayDetail(day.date)"
+                @touchstart="handleCellTouch($event, day)"
               ></div>
             </div>
           </div>
@@ -256,7 +356,7 @@ onMounted(async () => {
       </section>
 
       <!-- Section 2: Insights Charts -->
-      <section>
+      <section v-if="hasTrackingData">
         <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4 flex items-center gap-2">
           <TrendingUp :size="16" />
           Insights
@@ -277,7 +377,7 @@ onMounted(async () => {
               <div
                 v-for="(day, index) in moodData"
                 :key="index"
-                class="flex-1 min-w-[2px] rounded-t transition-all"
+                class="flex-1 min-w-[2px] rounded-t transition-all cursor-pointer hover:opacity-80"
                 :style="{ height: day.mood > 0 ? `${(day.mood / 10) * 100}%` : '2px' }"
                 :class="{
                   'bg-emerald-500': day.mood >= 7 && day.sober,
@@ -286,10 +386,11 @@ onMounted(async () => {
                   'bg-slate-700': day.mood === 0
                 }"
                 :title="`${formatDisplayDate(day.date)}: Mood ${day.mood || 'N/A'}`"
+                @click="openDayDetail(day.date)"
               ></div>
             </div>
             <div class="flex justify-between mt-2 text-xs text-slate-500 font-mono">
-              <span>{{ getDaysForRange(selectedRange) }}d ago</span>
+              <span>{{ dateRangeLabel.split(' - ')[0] }}</span>
               <span>Today</span>
             </div>
           </div>
@@ -441,5 +542,32 @@ onMounted(async () => {
         </div>
       </section>
     </div>
+
+    <!-- Day Detail Modal -->
+    <DayDetailModal
+      v-if="showDayModal && selectedDay"
+      :date="selectedDay.date"
+      :metric="selectedDay.metric"
+      :enabled-metrics="enabledMetrics"
+      @close="closeDayModal"
+    />
+
+    <!-- Mobile Touch Tooltip -->
+    <Teleport to="body">
+      <div
+        v-if="touchedCell"
+        class="fixed z-50 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white shadow-lg pointer-events-none"
+        :style="{
+          left: `${touchedCell.x}px`,
+          top: `${touchedCell.y - 50}px`,
+          transform: 'translateX(-50%)'
+        }"
+      >
+        <div class="font-medium">{{ formatDisplayDate(touchedCell.date) }}</div>
+        <div :class="touchedCell.success ? 'text-emerald-400' : touchedCell.hasData ? 'text-red-400' : 'text-slate-400'">
+          {{ touchedCell.success ? 'Completed' : touchedCell.hasData ? 'Missed' : 'No data' }}
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
