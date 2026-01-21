@@ -12,6 +12,7 @@ const showPassword = ref(false)
 const error = ref('')
 const isLoading = ref(false)
 const showLoginForm = ref(false)
+const userClickedLogin = ref(false) // Track if user explicitly clicked "Log In"
 
 // Redirect if already unlocked, or show login form for returning users
 onMounted(() => {
@@ -20,6 +21,7 @@ onMounted(() => {
   } else if (!needsSetup.value) {
     // Existing account found - skip landing page, show login form
     showLoginForm.value = true
+    userClickedLogin.value = false // Auto-shown, not user action
   }
 })
 
@@ -97,7 +99,7 @@ const goToSetup = () => {
           Create Account
         </button>
         <button
-          @click="showLoginForm = true"
+          @click="showLoginForm = true; userClickedLogin = true"
           class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-xl font-semibold transition-colors text-lg"
         >
           Log In
@@ -112,9 +114,10 @@ const goToSetup = () => {
 
     <!-- Login Form -->
     <div v-else class="w-full max-w-sm space-y-8 animate-fade-in">
-      <!-- Back Button -->
+      <!-- Back Button - only show if user explicitly clicked "Log In" from landing -->
       <button
-        @click="showLoginForm = false; error = ''; password = ''"
+        v-if="userClickedLogin"
+        @click="showLoginForm = false; userClickedLogin = false; error = ''; password = ''"
         class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
       >
         <ArrowLeft :size="18" />
@@ -187,7 +190,10 @@ const goToSetup = () => {
 
       <!-- Recovery Link -->
       <div v-if="!needsSetup" class="text-center">
-        <button class="text-slate-500 hover:text-slate-300 text-sm transition-colors">
+        <button
+          @click="router.push({ name: 'recovery' })"
+          class="text-slate-500 hover:text-slate-300 text-sm transition-colors"
+        >
           Forgot password? Use recovery phrase
         </button>
       </div>

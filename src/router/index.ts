@@ -66,6 +66,11 @@ const routes: RouteRecordRaw[] = [
     path: '/setup',
     name: 'setup',
     component: () => import('@/pages/SetupPage.vue')
+  },
+  {
+    path: '/recovery',
+    name: 'recovery',
+    component: () => import('@/pages/RecoveryPage.vue')
   }
 ]
 
@@ -91,13 +96,13 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
-  // If user is unlocked and tries to go to unlock/setup, redirect to dashboard
-  if (isUnlocked.value && (to.name === 'unlock' || to.name === 'setup')) {
+  // If user is unlocked and tries to go to unlock/setup/recovery, redirect to dashboard
+  if (isUnlocked.value && (to.name === 'unlock' || to.name === 'setup' || to.name === 'recovery')) {
     return next({ name: 'dashboard' })
   }
 
-  // If user hasn't set up vault and tries to go somewhere other than unlock/setup, redirect to unlock
-  if (needsSetup.value && to.name !== 'unlock' && to.name !== 'setup') {
+  // If user hasn't set up vault and tries to go somewhere other than unlock/setup/recovery, redirect to unlock
+  if (needsSetup.value && to.name !== 'unlock' && to.name !== 'setup' && to.name !== 'recovery') {
     return next({ name: 'unlock' })
   }
 

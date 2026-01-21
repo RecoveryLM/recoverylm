@@ -28,7 +28,9 @@ import {
   clearCurrentKey,
   getCurrentKey,
   isVaultUnlocked,
-  generateRecoveryPhrase
+  generateRecoveryPhrase,
+  keyFromRecoveryPhrase,
+  validateRecoveryPhrase
 } from './crypto'
 import {
   getDatabase,
@@ -689,6 +691,145 @@ export async function changePassword(currentPassword: string, newPassword: strin
     return true
   } catch (error) {
     console.error('Change password error:', error)
+    return false
+  }
+}
+
+// ============================================
+// Reset Password with Recovery Phrase
+// ============================================
+
+export async function resetPasswordWithRecoveryPhrase(phrase: string[], newPassword: string): Promise<boolean> {
+  try {
+    // Validate phrase format
+    if (!validateRecoveryPhrase(phrase)) {
+      return false
+    }
+
+    // Derive key from recovery phrase
+    const { key: oldKey } = await keyFromRecoveryPhrase(phrase)
+
+    // Verify the key by trying to decrypt the profile
+    const db = getDatabase()
+    const profileEntry = await db.userProfile.toArray()
+    if (profileEntry.length > 0) {
+      try {
+        await decryptObject<UserProfile>(profileEntry[0].data, oldKey)
+      } catch {
+        return false // Wrong recovery phrase
+      }
+    } else {
+      // No profile means no data to recover
+      return false
+    }
+
+    // Generate new salt and key
+    const newSalt = generateSalt()
+    const newKey = await deriveKey(newPassword, newSalt)
+    const newSaltBase64 = btoa(String.fromCharCode(...newSalt))
+
+    // Re-encrypt all data in a transaction (same logic as changePassword)
+    await db.transaction('rw', [
+      db.userProfile,
+      db.emergencyContacts,
+      db.supportNetwork,
+      db.dailyMetrics,
+      db.journalEntries,
+      db.chatMessages,
+      db.therapistGuidance,
+      db.metricsConfig,
+      db.settings,
+      db.metadata
+    ], async () => {
+      // Re-encrypt user profile
+      const profiles = await db.userProfile.toArray()
+      for (const entry of profiles) {
+        const decrypted = await decryptObject<UserProfile>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.userProfile.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt emergency contacts
+      const contacts = await db.emergencyContacts.toArray()
+      for (const entry of contacts) {
+        const decrypted = await decryptObject<EmergencyContact>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.emergencyContacts.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt support network
+      const network = await db.supportNetwork.toArray()
+      for (const entry of network) {
+        const decrypted = await decryptObject<SupportPerson>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.supportNetwork.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt daily metrics
+      const metrics = await db.dailyMetrics.toArray()
+      for (const entry of metrics) {
+        const decrypted = await decryptObject<DailyMetric>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.dailyMetrics.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt journal entries
+      const journal = await db.journalEntries.toArray()
+      for (const entry of journal) {
+        const decrypted = await decryptObject<JournalEntry>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.journalEntries.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt chat messages
+      const messages = await db.chatMessages.toArray()
+      for (const entry of messages) {
+        const decrypted = await decryptObject<ChatMessage>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.chatMessages.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt therapist guidance
+      const guidance = await db.therapistGuidance.toArray()
+      for (const entry of guidance) {
+        const decrypted = await decryptObject<TherapistGuidance>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.therapistGuidance.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt metrics config
+      const config = await db.metricsConfig.toArray()
+      for (const entry of config) {
+        const decrypted = await decryptObject<MetricsConfig>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.metricsConfig.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt settings (appSettings, recoveryPhrase)
+      const settingsEntries = await db.settings.toArray()
+      for (const entry of settingsEntries) {
+        try {
+          const payload = JSON.parse(entry.value)
+          if (payload.iv && payload.ciphertext) {
+            const decrypted = await decryptObject(payload, oldKey)
+            const encrypted = await encryptObject(decrypted, newKey, newSalt)
+            await db.settings.put({ ...entry, value: JSON.stringify(encrypted) })
+          }
+        } catch {
+          // Not an encrypted entry, skip
+        }
+      }
+
+      // Update the stored salt
+      await db.metadata.put({ key: 'salt', value: newSaltBase64 })
+    })
+
+    // Update the current key in memory (auto-unlock after reset)
+    setCurrentKey(newKey, newSalt)
+
+    return true
+  } catch (error) {
+    console.error('Reset password with recovery phrase error:', error)
     return false
   }
 }

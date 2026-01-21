@@ -266,6 +266,32 @@ export function useVault() {
     return success
   }
 
+  // ============================================
+  // Reset Password with Recovery Phrase
+  // ============================================
+
+  const resetPasswordWithRecoveryPhrase = async (phrase: string[], newPassword: string): Promise<boolean> => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const success = await vault.resetPasswordWithRecoveryPhrase(phrase, newPassword)
+      if (success) {
+        isUnlocked.value = true
+        userProfile.value = await vault.getProfile()
+      } else {
+        error.value = 'Invalid recovery phrase or could not decrypt vault'
+      }
+      return success
+    } catch (e) {
+      error.value = 'Failed to reset password'
+      console.error('Reset password error:', e)
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     // State
     isUnlocked: readonly(isUnlocked),
@@ -331,6 +357,9 @@ export function useVault() {
 
     // Import Backup
     validateBackup,
-    importBackup
+    importBackup,
+
+    // Reset Password with Recovery Phrase
+    resetPasswordWithRecoveryPhrase
   }
 }
