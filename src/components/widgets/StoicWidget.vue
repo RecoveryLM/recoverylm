@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Columns2, Plus, X, CheckCircle2 } from 'lucide-vue-next'
+import type { WidgetCompletionState } from '@/types'
 
 const props = withDefaults(defineProps<{
   situation?: string
+  completionState?: WidgetCompletionState
 }>(), {
   situation: ''
 })
@@ -12,13 +14,17 @@ const emit = defineEmits<{
   complete: [{ success: boolean; canControl: string[]; cannotControl: string[] }]
 }>()
 
+// Restore state from completionState if present
+const savedCanControl = (props.completionState?.result?.canControl as string[]) ?? []
+const savedCannotControl = (props.completionState?.result?.cannotControl as string[]) ?? []
+
 const situationInput = ref(props.situation)
-const canControl = ref<string[]>([])
-const cannotControl = ref<string[]>([])
+const canControl = ref<string[]>(savedCanControl)
+const cannotControl = ref<string[]>(savedCannotControl)
 const newCanControl = ref('')
 const newCannotControl = ref('')
-const showSummary = ref(false)
-const isSubmitted = ref(false)
+const showSummary = ref(!!props.completionState)
+const isSubmitted = ref(!!props.completionState)
 
 const hasEntries = computed(() => canControl.value.length > 0 || cannotControl.value.length > 0)
 

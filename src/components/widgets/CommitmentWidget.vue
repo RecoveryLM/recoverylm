@@ -2,9 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { ScrollText, Edit3, Save, X, CheckCircle2 } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
+import type { WidgetCompletionState } from '@/types'
 
 const props = withDefaults(defineProps<{
   mode?: 'view' | 'edit'
+  completionState?: WidgetCompletionState
 }>(), {
   mode: 'view'
 })
@@ -13,12 +15,15 @@ const emit = defineEmits<{
   complete: [{ success: boolean; commitment: string }]
 }>()
 
+// Restore state from completionState if present
+const wasCompleted = !!props.completionState
+
 const vault = useVault()
-const isEditing = ref(props.mode === 'edit')
-const commitment = ref('')
+const isEditing = ref(props.mode === 'edit' && !wasCompleted)
+const commitment = ref((props.completionState?.result?.commitment as string) ?? '')
 const editedCommitment = ref('')
 const isSaving = ref(false)
-const showSaved = ref(false)
+const showSaved = ref(wasCompleted)
 
 onMounted(async () => {
   const profile = await vault.getProfile()

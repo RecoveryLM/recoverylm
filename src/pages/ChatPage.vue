@@ -7,7 +7,7 @@ import { useChat } from '@/composables/useChat'
 import { useCrisis } from '@/composables/useCrisis'
 import { useActivityResult } from '@/composables/useActivityResult'
 import { useVault } from '@/composables/useVault'
-import type { WidgetId, WidgetCommand } from '@/types'
+import type { WidgetId, WidgetCommand, DailyMetric } from '@/types'
 import { Sparkles } from 'lucide-vue-next'
 import WidgetRenderer from '@/components/widgets/WidgetRenderer.vue'
 import TypingIndicator from '@/components/chat/TypingIndicator.vue'
@@ -24,7 +24,7 @@ const router = useRouter()
 const route = useRoute()
 
 // Use the real chat composable
-const { messages, isLoading, isStreaming, isGeneratingGreeting, error, agentState, sendMessage: chatSendMessage, startNewSession, loadTodaySession, generateGreeting, showWidget } = useChat()
+const { messages, isLoading, isStreaming, isGeneratingGreeting, error, agentState, sendMessage: chatSendMessage, startNewSession, loadTodaySession, generateGreeting, showWidget, completeWidget } = useChat()
 const { showCrisisModal } = useCrisis()
 const { consumeResult } = useActivityResult()
 const { userProfile } = useVault()
@@ -217,7 +217,10 @@ const handleInputBlur = () => {
   }
 }
 
-const handleWidgetComplete = (widgetId: string, result: unknown) => {
+const handleWidgetComplete = async (messageId: string, widgetId: string, result: unknown) => {
+  // Persist completion state first
+  await completeWidget(messageId, widgetId as WidgetId, result as Record<string, unknown>)
+
   // Include the actual widget result data so the AI can see what the user entered
   let completionNote = ''
 
@@ -250,9 +253,9 @@ const handleWidgetComplete = (widgetId: string, result: unknown) => {
       break
     }
     case 'W_CHECKIN': {
-      const r = result as { success: boolean; metric: { sobriety: boolean; exercised: boolean; mealsEaten: number; mood: number; journaled: boolean; socialConnection: boolean; sleepHours: number; notes?: string } }
+      const r = result as { success: boolean; metric: DailyMetric }
       const m = r.metric
-      completionNote = `I completed my daily check-in:\n- Sober today: ${m.sobriety ? 'Yes' : 'No'}\n- Exercised: ${m.exercised ? 'Yes' : 'No'}\n- Meals eaten: ${m.mealsEaten}\n- Mood (1-10): ${m.mood}\n- Journaled: ${m.journaled ? 'Yes' : 'No'}\n- Social connection: ${m.socialConnection ? 'Yes' : 'No'}\n- Sleep: ${m.sleepHours} hours${m.notes ? `\n- Notes: ${m.notes}` : ''}`
+      completionNote = `I completed my daily check-in:\n- Sober today: ${m.sobrietyMaintained ? 'Yes' : 'No'}\n- Mood (1-10): ${m.moodScore}\n- Exercise: ${m.exercise ? 'Yes' : 'No'}\n- Meditation: ${m.meditation ? 'Yes' : 'No'}\n- Connection: ${m.connectionTime ? 'Yes' : 'No'}${m.notes ? `\n- Notes: ${m.notes}` : ''}`
       break
     }
     case 'W_COMMITMENT': {
@@ -377,9 +380,10 @@ const handleNewChat = () => {
             <template v-if="message.widgets?.length">
               <WidgetRenderer
                 v-for="(widget, idx) in message.widgets"
-                :key="idx"
+                :key="`${message.id}-${idx}`"
                 :widget="widget"
-                @complete="handleWidgetComplete"
+                :message-id="message.id"
+                @complete="(widgetId, result) => handleWidgetComplete(message.id, widgetId, result)"
               />
             </template>
           </div>

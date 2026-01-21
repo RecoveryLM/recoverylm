@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { Waves, Play, Pause, RotateCcw, CheckCircle2, Volume2, VolumeX, Mic, MicOff } from 'lucide-vue-next'
 import { useAudioCues } from '@/composables/useAudioCues'
+import type { WidgetCompletionState } from '@/types'
 
 type WidgetState = 'briefing' | 'meditating' | 'complete'
 
@@ -15,6 +16,7 @@ interface Phase {
 
 const props = withDefaults(defineProps<{
   duration?: number
+  completionState?: WidgetCompletionState
 }>(), {
   duration: 300 // 5 minutes default
 })
@@ -26,11 +28,14 @@ const emit = defineEmits<{
 // Audio system
 const { playChime, speak, isSupported, setSpeechEnabled, setAudioEnabled } = useAudioCues()
 
+// Restore state from completionState if present
+const savedDuration = (props.completionState?.result?.durationCompleted as number) ?? 0
+
 // Widget state
-const widgetState = ref<WidgetState>('briefing')
-const timeLeft = ref(props.duration)
+const widgetState = ref<WidgetState>(props.completionState ? 'complete' : 'briefing')
+const timeLeft = ref(props.completionState ? props.duration - savedDuration : props.duration)
 const isRunning = ref(false)
-const isSubmitted = ref(false)
+const isSubmitted = ref(!!props.completionState)
 const currentPhase = ref(0)
 
 // Audio preferences

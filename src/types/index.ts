@@ -198,9 +198,15 @@ export type WidgetId =
   | 'W_COMMITMENT'
   | 'W_NETWORK'
 
+export interface WidgetCompletionState {
+  completedAt: number
+  result: Record<string, unknown>
+}
+
 export interface WidgetCommand {
   id: WidgetId
   params: Record<string, unknown>
+  completionState?: WidgetCompletionState
 }
 
 export interface ParsedResponse {

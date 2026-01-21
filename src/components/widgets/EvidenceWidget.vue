@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Scale, Plus, X, CheckCircle2 } from 'lucide-vue-next'
+import type { WidgetCompletionState } from '@/types'
 
 const props = withDefaults(defineProps<{
   thought?: string
   distortion?: string
+  completionState?: WidgetCompletionState
 }>(), {
   thought: '',
   distortion: ''
@@ -14,14 +16,20 @@ const emit = defineEmits<{
   complete: [{ success: boolean; thought: string; evidenceFor: string[]; evidenceAgainst: string[]; balancedThought: string }]
 }>()
 
-const thoughtInput = ref(props.thought)
-const evidenceFor = ref<string[]>([])
-const evidenceAgainst = ref<string[]>([])
+// Restore state from completionState if present
+const savedThought = (props.completionState?.result?.thought as string) ?? props.thought
+const savedEvidenceFor = (props.completionState?.result?.evidenceFor as string[]) ?? []
+const savedEvidenceAgainst = (props.completionState?.result?.evidenceAgainst as string[]) ?? []
+const savedBalancedThought = (props.completionState?.result?.balancedThought as string) ?? ''
+
+const thoughtInput = ref(savedThought)
+const evidenceFor = ref<string[]>(savedEvidenceFor)
+const evidenceAgainst = ref<string[]>(savedEvidenceAgainst)
 const newEvidenceFor = ref('')
 const newEvidenceAgainst = ref('')
-const balancedThought = ref('')
-const showSummary = ref(false)
-const isSubmitted = ref(false)
+const balancedThought = ref(savedBalancedThought)
+const showSummary = ref(!!props.completionState)
+const isSubmitted = ref(!!props.completionState)
 
 const hasEvidence = computed(() => evidenceFor.value.length > 0 || evidenceAgainst.value.length > 0)
 const canComplete = computed(() => hasEvidence.value && balancedThought.value.trim().length >= 10)

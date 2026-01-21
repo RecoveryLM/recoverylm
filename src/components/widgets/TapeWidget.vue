@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { FastForward, ChevronRight, ChevronLeft, AlertTriangle, CheckCircle2 } from 'lucide-vue-next'
+import type { WidgetCompletionState } from '@/types'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   trigger?: string
   currentThought?: string
+  completionState?: WidgetCompletionState
 }>(), {
   trigger: '',
   currentThought: ''
@@ -14,9 +16,12 @@ const emit = defineEmits<{
   complete: [{ success: boolean; responses: string[] }]
 }>()
 
-const currentStep = ref(0)
-const responses = ref<string[]>(['', '', '', ''])
-const isSubmitted = ref(false)
+// Restore state from completionState if present
+const savedResponses = (props.completionState?.result?.responses as string[]) ?? ['', '', '', '']
+
+const currentStep = ref(props.completionState ? 4 : 0) // Go to completion screen if already completed
+const responses = ref<string[]>(savedResponses.length === 4 ? savedResponses : ['', '', '', ''])
+const isSubmitted = ref(!!props.completionState)
 
 const steps = [
   {

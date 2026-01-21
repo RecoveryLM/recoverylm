@@ -1,5 +1,5 @@
 import { ref, readonly } from 'vue'
-import type { ChatMessage, WidgetCommand } from '@/types'
+import type { ChatMessage, WidgetCommand, WidgetId } from '@/types'
 import { generateId, generateSessionId } from '@/types'
 import {
   runAgent,
@@ -324,6 +324,27 @@ export function useChat() {
   }
 
   /**
+   * Persist widget completion state to the vault
+   */
+  const completeWidget = async (
+    messageId: string,
+    widgetId: WidgetId,
+    result: Record<string, unknown>
+  ): Promise<void> => {
+    const message = messages.value.find(m => m.id === messageId)
+    if (!message?.widgets) return
+
+    const widget = message.widgets.find(w => w.id === widgetId)
+    if (!widget) return
+
+    widget.completionState = { completedAt: Date.now(), result }
+
+    if (isUnlocked.value) {
+      await saveChatMessage(message)
+    }
+  }
+
+  /**
    * Generate a personalized greeting message from the AI
    */
   const generateGreeting = async (): Promise<void> => {
@@ -402,6 +423,7 @@ export function useChat() {
     agentState: readonly(agentState),
     sendMessage,
     showWidget,
+    completeWidget,
     loadSession,
     loadTodaySession,
     startNewSession,

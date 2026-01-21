@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { ShieldAlert, CheckCircle2, Circle, Pause, Play } from 'lucide-vue-next'
+import type { WidgetCompletionState } from '@/types'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   trigger?: string
   intensity?: number
+  completionState?: WidgetCompletionState
 }>(), {
   trigger: 'unspecified',
   intensity: 5
@@ -14,9 +16,12 @@ const emit = defineEmits<{
   complete: [{ success: boolean; stepsCompleted: string[] }]
 }>()
 
+// Restore state from completionState if present
+const completedSteps = (props.completionState?.result?.stepsCompleted as string[]) ?? []
+
 const timeLeft = ref(600) // 10 minutes
 const isActive = ref(true)
-const isSubmitted = ref(false)
+const isSubmitted = ref(!!props.completionState)
 let interval: ReturnType<typeof setInterval> | null = null
 
 const steps = ref([
@@ -25,35 +30,35 @@ const steps = ref([
     letter: 'D',
     label: 'Delay',
     description: 'I will not act for 10 minutes.',
-    checked: false
+    checked: completedSteps.includes('delay')
   },
   {
     id: 'escape',
     letter: 'E',
     label: 'Escape',
     description: 'Leave the immediate situation.',
-    checked: false
+    checked: completedSteps.includes('escape')
   },
   {
     id: 'neutralize',
     letter: 'N',
     label: 'Neutralize',
     description: '"This is just a thought, not a command."',
-    checked: false
+    checked: completedSteps.includes('neutralize')
   },
   {
     id: 'tasks',
     letter: 'T',
     label: 'Tasks',
     description: 'Do the dishes or walk around the block.',
-    checked: false
+    checked: completedSteps.includes('tasks')
   },
   {
     id: 'swap',
     letter: 'S',
     label: 'Swap',
     description: 'Change the feeling (music, cold water).',
-    checked: false
+    checked: completedSteps.includes('swap')
   },
 ])
 
@@ -63,7 +68,9 @@ const timerExpired = computed(() => timeLeft.value <= 0)
 const progress = computed(() => ((600 - timeLeft.value) / 600) * 100)
 
 onMounted(() => {
-  startTimer()
+  if (!isSubmitted.value) {
+    startTimer()
+  }
 })
 
 onUnmounted(() => {

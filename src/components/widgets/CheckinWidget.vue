@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ClipboardCheck, Smile, Moon, Brain, Heart, CheckCircle2 } from 'lucide-vue-next'
-import type { DailyMetric, MetricDefinition } from '@/types'
+import type { DailyMetric, MetricDefinition, WidgetCompletionState } from '@/types'
 import { today, DEFAULT_METRICS } from '@/types'
 import { useVault } from '@/composables/useVault'
 
 const props = withDefaults(defineProps<{
   date?: string
+  completionState?: WidgetCompletionState
 }>(), {
   date: today()
 })
@@ -17,14 +18,17 @@ const emit = defineEmits<{
 
 const { getMetricsConfig, saveMetric } = useVault()
 
-const isLoading = ref(true)
-const isComplete = ref(false)
+const isLoading = ref(!props.completionState)  // Skip loading when restoring from completionState
+const isComplete = ref(!!props.completionState)
 const isSaving = ref(false)
-const isSaved = ref(false)
+const isSaved = ref(!!props.completionState)
 const saveError = ref<string | null>(null)
 const enabledMetrics = ref<MetricDefinition[]>([])
 
-const metric = ref<DailyMetric>({
+// Restore metric from completionState if present
+const savedMetric = props.completionState?.result?.metric as DailyMetric | undefined
+
+const metric = ref<DailyMetric>(savedMetric ?? {
   date: props.date,
   sobrietyMaintained: true,
   exercise: false,

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { Users, Phone, Mail, MessageSquare, AlertCircle, CheckCircle2, ChevronRight } from 'lucide-vue-next'
-import type { SupportPerson, SupportNetwork } from '@/types'
+import type { SupportPerson, SupportNetwork, WidgetCompletionState } from '@/types'
 import { useVault } from '@/composables/useVault'
 
 const props = withDefaults(defineProps<{
   action?: 'view' | 'notify' | 'edit'
+  completionState?: WidgetCompletionState
 }>(), {
   action: 'view'
 })
@@ -14,11 +15,14 @@ const emit = defineEmits<{
   complete: [{ success: boolean; action: string; contactId?: string }]
 }>()
 
+// Restore state from completionState if present
+const wasCompleted = !!props.completionState
+
 const vault = useVault()
 const network = ref<SupportNetwork | null>(null)
 const selectedContact = ref<SupportPerson | null>(null)
 const isNotifying = ref(false)
-const notificationSent = ref(false)
+const notificationSent = ref(wasCompleted)
 
 onMounted(async () => {
   network.value = await vault.getSupportNetwork()

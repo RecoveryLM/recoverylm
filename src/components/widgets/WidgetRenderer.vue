@@ -4,6 +4,7 @@ import type { WidgetCommand } from '@/types'
 
 const props = defineProps<{
   widget: WidgetCommand
+  messageId: string
 }>()
 
 const emit = defineEmits<{
@@ -37,6 +38,7 @@ const handleComplete = (result: unknown) => {
       <component
         :is="component"
         v-bind="widget.params"
+        :completion-state="widget.completionState"
         @complete="handleComplete"
       />
       <template #fallback>
