@@ -162,6 +162,14 @@ export function useChat() {
         context,
         onStateChange: (state) => {
           agentState.value = state
+        },
+        onToken: (token) => {
+          // Real-time token callback for immediate UI updates
+          const msg = messages.value.find(m => m.id === messageId)
+          if (msg) {
+            msg.content += token
+            isStreaming.value = true
+          }
         }
       })
 
@@ -224,17 +232,16 @@ export function useChat() {
    */
   function handleStreamEvent(
     event: StreamEvent,
-    messageId: string,
+    _messageId: string,
     onText: (text: string) => void,
     onWidgets: (widgets: WidgetCommand[]) => void
   ): void {
     switch (event.type) {
       case 'token': {
-        const msg = messages.value.find(m => m.id === messageId)
-        if (msg) {
-          msg.content += event.text
-          onText(msg.content)
-        }
+        // Token streaming is now handled via the onToken callback for real-time updates.
+        // This event fires after streaming completes with the full accumulated text,
+        // so we just update the accumulatedText tracker without re-adding to msg.content.
+        onText(event.text)
         break
       }
 

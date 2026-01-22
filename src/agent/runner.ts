@@ -31,6 +31,8 @@ export interface AgentRunnerConfig {
   context: ContextWindow
   /** Optional callback for state changes */
   onStateChange?: (state: AgentLoopState) => void
+  /** Optional callback for real-time token streaming (fires immediately per token) */
+  onToken?: (token: string) => void
 }
 
 // ============================================
@@ -83,7 +85,7 @@ export async function* runAgent(
   userMessage: string,
   config: AgentRunnerConfig
 ): AsyncGenerator<StreamEvent, AssistantMessage, void> {
-  const { maxIterations = 5, context, onStateChange } = config
+  const { maxIterations = 5, context, onStateChange, onToken } = config
 
   // Initialize state
   const state: RunnerState = {
@@ -122,6 +124,8 @@ export async function* runAgent(
             onToken: (token) => {
               // We can't yield from inside a callback, so we accumulate
               state.accumulatedText += token
+              // Fire the immediate callback for real-time UI updates
+              onToken?.(token)
             },
             onToolUseStart: (toolName) => {
               // Tool notification handled after promise resolves
