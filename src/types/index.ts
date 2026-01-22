@@ -453,6 +453,8 @@ export interface DailyPracticeItem {
   description: string
   enabled: boolean
   order: number
+  startHour?: number            // 0-23, undefined = anytime
+  endHour?: number              // 0-23, undefined = anytime
 }
 
 export interface DailyPracticeConfig {
@@ -468,7 +470,9 @@ export const DEFAULT_DAILY_PRACTICE_ITEMS: DailyPracticeItem[] = [
     label: 'Morning Reflection',
     description: 'Morning Stoic Prep journal template',
     enabled: true,
-    order: 1
+    order: 1,
+    startHour: 5,
+    endHour: 10
   },
   {
     id: 'journal_evening-review',
@@ -477,7 +481,9 @@ export const DEFAULT_DAILY_PRACTICE_ITEMS: DailyPracticeItem[] = [
     label: 'Evening Review',
     description: 'Reflect on your day and extract lessons',
     enabled: false,
-    order: 2
+    order: 2,
+    startHour: 18,
+    endHour: 22
   },
   {
     id: 'journal_cbt-analysis',
@@ -514,7 +520,9 @@ export const DEFAULT_DAILY_PRACTICE_ITEMS: DailyPracticeItem[] = [
     label: 'Evening CBT Review',
     description: 'Evidence examination exercise',
     enabled: true,
-    order: 6
+    order: 6,
+    startHour: 18,
+    endHour: 22
   },
   {
     id: 'widget_W_STOIC',

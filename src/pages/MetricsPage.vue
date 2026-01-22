@@ -101,6 +101,9 @@ const getStreakForMetric = (metricId: string): number => {
       ? metric[metricId as keyof DailyMetric]
       : metric.customMetrics?.[metricId]
 
+    // Skip days where this specific metric wasn't tracked
+    if (value === undefined) continue
+
     if (value === true) {
       streak++
     } else {
