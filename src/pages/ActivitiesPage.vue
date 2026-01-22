@@ -14,7 +14,9 @@ import {
   Waves,
   MessageCircle,
   X,
-  ClipboardCheck
+  ClipboardCheck,
+  BookOpen,
+  Star
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 import type { WidgetId, DailyMetric, MetricDefinition } from '@/types'
@@ -29,6 +31,9 @@ import StoicWidget from '@/components/widgets/StoicWidget.vue'
 import EvidenceWidget from '@/components/widgets/EvidenceWidget.vue'
 import UrgeSurfWidget from '@/components/widgets/UrgeSurfWidget.vue'
 import CheckinWidget from '@/components/widgets/CheckinWidget.vue'
+import ThoughtLogWidget from '@/components/widgets/ThoughtLogWidget.vue'
+import GratitudeWidget from '@/components/widgets/GratitudeWidget.vue'
+import SelfAppreciationWidget from '@/components/widgets/SelfAppreciationWidget.vue'
 import CrisisQuickAccess from '@/components/CrisisQuickAccess.vue'
 
 const router = useRouter()
@@ -397,6 +402,39 @@ const activities: Activity[] = [
     icon: Waves,
     component: UrgeSurfWidget,
     defaultParams: { duration: 300 }
+  },
+  {
+    id: 'W_THOUGHTLOG',
+    name: 'Thought Log',
+    description: 'Work through difficult thoughts using the ABC model',
+    whenToUse: 'When a thought is bothering you or causing distress',
+    category: 'reflection',
+    modalSize: 'lg',
+    icon: BookOpen,
+    component: ThoughtLogWidget,
+    defaultParams: {}
+  },
+  {
+    id: 'W_GRATITUDE',
+    name: 'Gratitude Journal',
+    description: 'Record three good things from your day',
+    whenToUse: 'Daily practice, ideally in the evening',
+    category: 'daily',
+    modalSize: 'md',
+    icon: Sparkles,
+    component: GratitudeWidget,
+    defaultParams: {}
+  },
+  {
+    id: 'W_SELFAPPRECIATION',
+    name: 'Self Appreciation',
+    description: 'Celebrate your wins and recognize your strengths',
+    whenToUse: 'End of day or when you need a confidence boost',
+    category: 'daily',
+    modalSize: 'md',
+    icon: Star,
+    component: SelfAppreciationWidget,
+    defaultParams: {}
   }
 ]
 

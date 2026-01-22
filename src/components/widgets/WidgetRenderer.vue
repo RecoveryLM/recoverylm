@@ -20,7 +20,10 @@ const widgetComponents = {
   W_URGESURF: defineAsyncComponent(() => import('./UrgeSurfWidget.vue')),
   W_CHECKIN: defineAsyncComponent(() => import('./CheckinWidget.vue')),
   W_COMMITMENT: defineAsyncComponent(() => import('./CommitmentWidget.vue')),
-  W_NETWORK: defineAsyncComponent(() => import('./NetworkWidget.vue'))
+  W_NETWORK: defineAsyncComponent(() => import('./NetworkWidget.vue')),
+  W_THOUGHTLOG: defineAsyncComponent(() => import('./ThoughtLogWidget.vue')),
+  W_GRATITUDE: defineAsyncComponent(() => import('./GratitudeWidget.vue')),
+  W_SELFAPPRECIATION: defineAsyncComponent(() => import('./SelfAppreciationWidget.vue'))
 }
 
 const component = computed(() => {

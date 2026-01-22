@@ -44,6 +44,16 @@ const WIDGET_REGISTRY: Record<WidgetId, {
   W_NETWORK: {
     validateParams: (p) =>
       p.action === 'view' || p.action === 'notify' || p.action === 'edit'
+  },
+  W_THOUGHTLOG: {
+    validateParams: (p) =>
+      p.situation === undefined || typeof p.situation === 'string'
+  },
+  W_GRATITUDE: {
+    validateParams: () => true // All params optional
+  },
+  W_SELFAPPRECIATION: {
+    validateParams: () => true // All params optional
   }
 }
 
