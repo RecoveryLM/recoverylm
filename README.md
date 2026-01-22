@@ -12,7 +12,7 @@
 
 ## What is RecoveryLM?
 
-RecoveryLM is a **privacy-first Progressive Web App** that provides AI-powered support for people in addiction recovery. It operationalizes the **Independent Recovery Framework (IRF)**, which integrates:
+RecoveryLM is a **privacy-first Progressive Web App** that provides AI-powered support for people in addiction recovery. It operationalizes the **[Independent Recovery Framework](docs/independent-recovery-framework.md)**, which integrates:
 
 - **SMART Recovery** principles - Self-empowerment and evidence-based techniques
 - **Cognitive Behavioral Therapy (CBT)** - Identifying automatic thoughts and cognitive distortions
@@ -23,7 +23,21 @@ The app features **Remi**, a warm but direct AI companion who helps users practi
 
 ---
 
-## Why RecoveryLM Exists
+## Why This Exists
+
+Recovery is hard. It's harder when you don't have access to good support—whether that's a therapist you can afford, a sponsor who's available at 2am, or a support group that meets when you need it.
+
+RecoveryLM exists to fill the gaps. Not to replace therapists, sponsors, or support groups, but to be there in the moments between—when you need to practice a skill, process a difficult thought, or just have someone remind you why you're doing this.
+
+The tools here aren't novel. DENTS, urge surfing, cognitive restructuring, playing the tape through—these come from SMART Recovery, CBT, and decades of clinical practice. What's different is having them available instantly, privately, and without judgment.
+
+If you're working with a therapist or support group, RecoveryLM can help you practice between sessions. If you don't have access to those resources, it can help you get started with evidence-based techniques while you work on finding them.
+
+This was built by someone who needed it to exist.
+
+---
+
+## Why Privacy Matters Here
 
 ### The Privacy Problem
 
@@ -38,6 +52,27 @@ RecoveryLM takes a different approach:
 - **Zero-knowledge design** - We can't access your data because we never have it. Not encrypted on our servers—*not on our servers at all*.
 
 Your encryption key exists only in your browser's memory. When you close the app, it's gone. Only your password (or recovery phrase) can bring it back.
+
+---
+
+## The Recovery Framework
+
+RecoveryLM implements the **Self-Intervention Recovery Framework**—a structured, self-directed approach to addiction recovery that puts you in charge of your own intervention.
+
+The framework is built on **three pillars**:
+
+1. **Therapeutic Work** - Individual therapy or evidence-based programs (SMART Recovery, Recovery Dharma, etc.)
+2. **Personal Accountability Network** - A structured support system with defined roles, clear expectations, and explicit authority to intervene
+3. **Daily Practice** - Consistent routines, tracked metrics, cognitive work (CBT, Stoic reflection), and distress tolerance skills
+
+The framework also covers:
+- Building and managing your accountability network
+- Understanding your vulnerability pattern (craving vs. rationalization)
+- Leading vs. lagging indicators for relapse prevention
+- Escalation protocols and granted authorities
+- Cognitive tools: DENTS protocol, playing the tape through, urge surfing
+
+**[Read the full Self-Intervention Recovery Framework →](docs/independent-recovery-framework.md)**
 
 ---
 
@@ -193,11 +228,13 @@ Always run `npm run typecheck` before committing changes.
 
 ## Contributing
 
-Contributions are welcome. Please ensure:
+Contributions are welcome. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
 
-1. TypeScript types are correct (`npm run typecheck` passes)
-2. Code follows existing patterns and conventions
-3. Privacy principles are maintained—no changes that would expose user data
+- What we're looking for (tests for crisis detection, accessibility, offline support)
+- The privacy principles that are non-negotiable
+- How to submit changes
+
+For security concerns, see **[SECURITY.md](SECURITY.md)**.
 
 ---
 
@@ -218,6 +255,12 @@ This app is designed to supplement—not replace—professional mental health ca
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+*Dedicated to those who lost themselves to addiction, and to those who loved them through the darkness.*
+
+*And to my brother, who couldn't find the help he needed.*
 
 ---
 

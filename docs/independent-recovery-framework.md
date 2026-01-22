@@ -1,4 +1,4 @@
-# Self-Intervention Recovery Framework
+# Independent Recovery Framework
 
 A self-directed approach to addiction recovery that puts you in charge of your own intervention.
 
