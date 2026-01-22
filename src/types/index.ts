@@ -590,6 +590,39 @@ export const DEFAULT_DAILY_PRACTICE_ITEMS: DailyPracticeItem[] = [
 ]
 
 // ============================================
+// Session Summary & Activity Insights
+// ============================================
+
+export type EmotionalArc = 'improving' | 'stable' | 'declining' | 'crisis-managed' | 'unknown'
+export type SessionEndState = 'resolved' | 'unresolved' | 'open-ended'
+
+export interface SessionSummary {
+  sessionId: string
+  date: string
+  themes: string[]
+  emotionalArc: EmotionalArc
+  widgetsUsed: WidgetId[]
+  endState: SessionEndState
+  userIntentions?: string[]
+  messageCount: number
+}
+
+export interface ActivityInsight {
+  widgetId: WidgetId
+  totalCompletions: number
+  lastUsedRelative: string  // "today", "yesterday", "3 days ago", "never"
+  lastUsedTimestamp?: number
+  isEnabledInDailyPractice: boolean
+  completedToday: boolean
+}
+
+export interface ActivityInsightsResult {
+  insights: ActivityInsight[]
+  suggestedActivities: WidgetId[]
+  practiceGaps: WidgetId[]  // Enabled but not used in 2+ weeks
+}
+
+// ============================================
 // Utility Types
 // ============================================
 

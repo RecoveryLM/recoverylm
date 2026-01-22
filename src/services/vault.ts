@@ -608,6 +608,35 @@ export async function getActivityCounts(): Promise<Record<WidgetId, number>> {
   return result as Record<WidgetId, number>
 }
 
+/**
+ * Get all activity logs from today (efficient lookup for greeting context)
+ */
+export async function getTodayActivityLogs(): Promise<ActivityLog[]> {
+  const { key } = requireUnlocked()
+  const db = getDatabase()
+
+  // Get start of today in milliseconds
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+
+  const entries = await db.activityLogs
+    .where('completedAt')
+    .aboveOrEqual(startOfToday)
+    .toArray()
+
+  const logs: ActivityLog[] = []
+  for (const entry of entries) {
+    try {
+      const decrypted = await decryptObject<ActivityLog>(entry.data, key)
+      logs.push(decrypted)
+    } catch (e) {
+      console.error('Failed to decrypt activity log:', e)
+    }
+  }
+
+  return logs
+}
+
 // ============================================
 // App Settings
 // ============================================

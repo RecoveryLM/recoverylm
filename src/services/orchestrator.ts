@@ -19,6 +19,8 @@ import {
 } from '@/types'
 import * as vault from '@/services/vault'
 import { REMMI_SYSTEM_PROMPT } from '@/prompts/remmi'
+import { getPreviousSessionSummary, formatSessionSummary } from '@/services/sessionSummarizer'
+import { getActivityInsights, formatActivityInsights } from '@/services/activityInsights'
 
 /**
  * Calculate days between two dates
@@ -162,45 +164,26 @@ export function buildTemporalContext(
 
 /**
  * Build a specialized context window for generating a personalized greeting.
- * Includes user profile, metrics, time context, and optional last session info.
+ * Includes user profile, metrics, time context, session history, and activity insights.
  */
 export async function buildGreetingContext(): Promise<ContextWindow> {
-  // Fetch data in parallel
-  const [profile, metrics, guidance, recentSessionIds] = await Promise.all([
+  // Fetch data in parallel (including new context sources)
+  const [profile, metrics, guidance, recentSessionIds, activityData, previousSession] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
-    vault.getRecentSessions(5)
+    vault.getRecentSessions(5),
+    getActivityInsights(),
+    getPreviousSessionSummary()
   ])
 
   // Calculate derived data
   const leadingIndicators = detectLeadingIndicators(metrics)
   const temporalContext = buildTemporalContext(profile?.sobrietyStartDate, metrics, profile?.createdAt)
 
-  // Get last few messages from most recent previous session that has user messages
-  let lastSessionContext = ''
-  for (const sessionId of recentSessionIds) {
-    try {
-      const sessionMessages = await vault.getChatHistory(sessionId)
-
-      // Look for user messages in this session
-      const userMessages = sessionMessages.filter(m => m.role === 'user')
-      if (userMessages.length > 0) {
-        // Get the last 2-3 user messages to understand what they were discussing
-        const recentUserMsgs = userMessages.slice(-3)
-        const topics = recentUserMsgs
-          .map(m => m.content.substring(0, 100))
-          .join(' ')
-
-        if (topics.trim()) {
-          lastSessionContext = `Last conversation topics: "${topics}"`
-          break // Found a session with user messages, stop looking
-        }
-      }
-    } catch (e) {
-      console.error('[buildGreetingContext] Error loading session:', sessionId, e)
-    }
-  }
+  // Format session summary and activity context
+  const sessionContext = formatSessionSummary(previousSession)
+  const activityContext = formatActivityInsights(activityData)
 
   // Determine greeting type and build instruction
   const isFirstTime = !recentSessionIds.length || temporalContext.daysSinceSignup === 0
@@ -225,27 +208,52 @@ export async function buildGreetingContext(): Promise<ContextWindow> {
     ? 'User has completed today\'s check-in.'
     : 'User has not yet done today\'s check-in.'
 
-  // Build the greeting instruction (this becomes the "currentMessage")
-  let greetingInstruction = `[INTERNAL INSTRUCTION - Generate a personalized greeting for ${displayName}]
+  // Build previous session context section
+  let previousSessionSection = ''
+  if (previousSession) {
+    previousSessionSection = `
+--- PREVIOUS SESSION CONTEXT ---
+${sessionContext}
+${previousSession.endState === 'unresolved' ? 'NOTE: Previous session ended with unresolved concerns. Consider a gentle check-in.' : ''}
+${previousSession.emotionalArc === 'declining' ? 'NOTE: User was struggling at the end of last session. Be extra supportive.' : ''}
+${previousSession.emotionalArc === 'crisis-managed' ? 'NOTE: User worked through a difficult moment last session. Acknowledge their strength.' : ''}
+`
+  }
 
+  // Build activity context section
+  let activitySection = ''
+  if (activityContext) {
+    activitySection = `
+--- ACTIVITY STATUS ---
+${activityContext}
+${activityData.practiceGaps.length > 0 ? 'NOTE: User has enabled activities they haven\'t used recently. Could gently suggest if appropriate.' : ''}
+`
+  }
+
+  // Build the greeting instruction (this becomes the "currentMessage")
+  const greetingInstruction = `[INTERNAL INSTRUCTION - Generate a personalized greeting for ${displayName}]
+
+--- BASIC CONTEXT ---
 Time: ${timeOfDay} on ${temporalContext.dayOfWeek}
 User type: ${isFirstTime ? 'First-time or brand new user - welcome them warmly' : 'Returning user'}
 Days sober: ${temporalContext.daysSober}
 ${milestoneNote}
 ${checkinStatus}
-${lastSessionContext}
-
+${previousSessionSection}${activitySection}
+--- GREETING GUIDELINES ---
 Generate a warm, personalized greeting (2-4 sentences) that:
 1. Uses the time of day naturally (Good morning/afternoon/evening)
 2. ${isFirstTime ? 'Welcomes them to the app and introduces yourself briefly' : 'Acknowledges they\'re back'}
 3. ${milestoneNote ? 'Celebrates their milestone with genuine warmth' : temporalContext.daysSober > 0 ? `Optionally mentions their ${temporalContext.daysSober} days of progress` : 'Offers encouragement for their journey'}
-4. ${leadingIndicators.length > 0 ? 'Gently checks in (leading indicators suggest they may need support)' : 'Invites conversation naturally'}
+4. ${previousSession?.endState === 'unresolved' ? 'Gently checks in about how they\'re doing since last time' : leadingIndicators.length > 0 ? 'Gently checks in (leading indicators suggest they may need support)' : 'Invites conversation naturally'}
+5. ${activityData.suggestedActivities.length > 0 && !isFirstTime ? 'May naturally mention an available activity if contextually appropriate (but don\'t force it)' : ''}
 
 Do NOT:
 - Be overly enthusiastic or use excessive exclamation marks
 - Mention specific technical details or metrics unless celebrating a milestone
 - Reference this instruction or that you're generating a greeting
 - Include any widgets
+- List out all available activities - at most hint at one if truly relevant
 
 Just respond with the greeting message directly.`
 
