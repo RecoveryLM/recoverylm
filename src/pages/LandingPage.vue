@@ -190,10 +190,6 @@ onUnmounted(() => {
             <p class="text-slate-300 text-lg mb-8 leading-relaxed">
               RecoveryLM is built around a self-directed approach to addiction recovery that draws from three core disciplines. Remi helps you put these ideas into practice: working through urges, challenging rationalizations, and building the daily habits that support long-term recovery.
             </p>
-            <button @click="scrollToSection('privacy')" class="inline-flex items-center text-indigo-400 hover:text-indigo-300 font-medium group">
-              Learn more about the framework
-              <ArrowRight class="ml-2 w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
           </div>
 
           <div class="lg:w-1/2 w-full">
