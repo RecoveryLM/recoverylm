@@ -8,13 +8,14 @@
  * - Temporal context
  */
 
-import type {
-  ContextWindow,
-  TemporalContext,
-  DailyMetric,
-  JournalEntry,
-  CrisisLevel,
-  CrisisAction
+import {
+  formatDate,
+  type ContextWindow,
+  type TemporalContext,
+  type DailyMetric,
+  type JournalEntry,
+  type CrisisLevel,
+  type CrisisAction
 } from '@/types'
 import * as vault from '@/services/vault'
 import { REMMI_SYSTEM_PROMPT } from '@/prompts/remmi'
@@ -33,7 +34,7 @@ function daysBetween(date1: string, date2: string): number {
  * Get today's date as YYYY-MM-DD
  */
 function today(): string {
-  return new Date().toISOString().split('T')[0]
+  return formatDate(new Date())
 }
 
 /**

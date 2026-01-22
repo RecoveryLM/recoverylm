@@ -15,7 +15,7 @@ import {
 import { useVault } from '@/composables/useVault'
 import { useCrisis } from '@/composables/useCrisis'
 import { detectLeadingIndicators } from '@/services/orchestrator'
-import type { DailyMetric, UserProfile, SupportNetwork, EmergencyContact, DailyPracticeConfig, JournalEntry, SupportPerson } from '@/types'
+import { formatDate, type DailyMetric, type UserProfile, type SupportNetwork, type EmergencyContact, type DailyPracticeConfig, type JournalEntry, type SupportPerson } from '@/types'
 
 const router = useRouter()
 const { getProfile, getMetrics, getSupportNetwork, getEmergencyContact, getDailyPracticeConfig, getJournalEntries } = useVault()
@@ -198,9 +198,9 @@ const metricCards = computed(() => {
 // ============================================
 
 const isJournalCompletedToday = (templateId: string): boolean => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = formatDate(new Date())
   return todayJournalEntries.value.some(entry => {
-    const entryDate = new Date(entry.timestamp).toISOString().split('T')[0]
+    const entryDate = formatDate(new Date(entry.timestamp))
     if (entryDate !== today) return false
 
     if (templateId === 'cbt-analysis' && entry.tags.includes('distortion-caught')) return true
