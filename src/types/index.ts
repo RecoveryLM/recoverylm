@@ -197,6 +197,9 @@ export type WidgetId =
   | 'W_CHECKIN'
   | 'W_COMMITMENT'
   | 'W_NETWORK'
+  | 'W_THOUGHTLOG'
+  | 'W_GRATITUDE'
+  | 'W_SELFAPPRECIATION'
 
 export interface WidgetCompletionState {
   completedAt: number
@@ -249,6 +252,18 @@ export interface CommitmentWidgetParams {
 
 export interface NetworkWidgetParams {
   action: 'view' | 'notify' | 'edit'
+}
+
+export interface ThoughtLogParams {
+  situation?: string
+}
+
+export interface GratitudeParams {
+  // All params optional - widget can be opened without context
+}
+
+export interface SelfAppreciationParams {
+  // All params optional - widget can be opened without context
 }
 
 // ============================================
@@ -422,6 +437,149 @@ export interface StatusReport {
   concerns: string[]
   message?: string // Optional personal note from user
 }
+
+// ============================================
+// Daily Practice Configuration
+// ============================================
+
+export type DailyPracticeItemType = 'widget' | 'journal'
+
+export interface DailyPracticeItem {
+  id: string                    // e.g., 'journal_morning-stoic' or 'widget_W_STOIC'
+  type: DailyPracticeItemType
+  widgetId?: WidgetId           // For widget items
+  journalTemplateId?: string    // For journal items
+  label: string
+  description: string
+  enabled: boolean
+  order: number
+}
+
+export interface DailyPracticeConfig {
+  items: DailyPracticeItem[]
+}
+
+export const DEFAULT_DAILY_PRACTICE_ITEMS: DailyPracticeItem[] = [
+  // Journal Templates
+  {
+    id: 'journal_morning-stoic',
+    type: 'journal',
+    journalTemplateId: 'morning-stoic',
+    label: 'Morning Reflection',
+    description: 'Morning Stoic Prep journal template',
+    enabled: true,
+    order: 1
+  },
+  {
+    id: 'journal_evening-review',
+    type: 'journal',
+    journalTemplateId: 'evening-review',
+    label: 'Evening Review',
+    description: 'Reflect on your day and extract lessons',
+    enabled: false,
+    order: 2
+  },
+  {
+    id: 'journal_cbt-analysis',
+    type: 'journal',
+    journalTemplateId: 'cbt-analysis',
+    label: 'CBT Analysis',
+    description: 'Challenge negative thoughts with structured analysis',
+    enabled: false,
+    order: 3
+  },
+  {
+    id: 'journal_freeform',
+    type: 'journal',
+    journalTemplateId: 'freeform',
+    label: 'Freeform Journal',
+    description: 'No structure, just write',
+    enabled: false,
+    order: 4
+  },
+  // Widget Activities
+  {
+    id: 'widget_W_CHECKIN',
+    type: 'widget',
+    widgetId: 'W_CHECKIN',
+    label: 'Daily Check-In',
+    description: 'Track your sobriety, mood, and habits',
+    enabled: true,
+    order: 5
+  },
+  {
+    id: 'widget_W_EVIDENCE',
+    type: 'widget',
+    widgetId: 'W_EVIDENCE',
+    label: 'Evening CBT Review',
+    description: 'Evidence examination exercise',
+    enabled: true,
+    order: 6
+  },
+  {
+    id: 'widget_W_STOIC',
+    type: 'widget',
+    widgetId: 'W_STOIC',
+    label: 'Stoic Exercise',
+    description: 'Dichotomy of Control exercise',
+    enabled: false,
+    order: 7
+  },
+  {
+    id: 'widget_W_URGESURF',
+    type: 'widget',
+    widgetId: 'W_URGESURF',
+    label: 'Urge Surfing',
+    description: 'Guided urge meditation',
+    enabled: false,
+    order: 8
+  },
+  {
+    id: 'widget_W_DENTS',
+    type: 'widget',
+    widgetId: 'W_DENTS',
+    label: 'DENTS Protocol',
+    description: 'Urge surfing protocol',
+    enabled: false,
+    order: 9
+  },
+  {
+    id: 'widget_W_TAPE',
+    type: 'widget',
+    widgetId: 'W_TAPE',
+    label: 'Play the Tape',
+    description: 'Play the tape through (consequences)',
+    enabled: false,
+    order: 10
+  },
+  {
+    id: 'widget_W_THOUGHTLOG',
+    type: 'widget',
+    widgetId: 'W_THOUGHTLOG',
+    label: 'Thought Log',
+    description: 'Work through difficult thoughts using the ABCDE model',
+    enabled: false,
+    order: 11
+  },
+  {
+    id: 'widget_W_GRATITUDE',
+    type: 'widget',
+    widgetId: 'W_GRATITUDE',
+    label: 'Gratitude Journal',
+    description: 'Record three good things from your day',
+    enabled: false,
+    order: 12
+  },
+  {
+    id: 'widget_W_SELFAPPRECIATION',
+    type: 'widget',
+    widgetId: 'W_SELFAPPRECIATION',
+    label: 'Self Appreciation',
+    description: 'Celebrate your wins and recognize your strengths',
+    enabled: false,
+    order: 13
+  }
+]
 
 // ============================================
 // Utility Types

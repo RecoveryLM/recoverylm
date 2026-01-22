@@ -5,7 +5,8 @@ import type {
   SupportNetwork,
   DailyMetric,
   MetricsConfig,
-  AppSettings
+  AppSettings,
+  DailyPracticeConfig
 } from '@/types'
 import type { BackupData } from '@/services/vault'
 import * as vault from '@/services/vault'
@@ -201,6 +202,20 @@ export function useVault() {
   }
 
   // ============================================
+  // Daily Practice Config Operations
+  // ============================================
+
+  const getDailyPracticeConfig = async (): Promise<DailyPracticeConfig> => {
+    if (!isUnlocked.value) return { items: [] }
+    return vault.getDailyPracticeConfig()
+  }
+
+  const saveDailyPracticeConfig = async (config: DailyPracticeConfig): Promise<void> => {
+    if (!isUnlocked.value) throw new Error('Vault is locked')
+    await vault.saveDailyPracticeConfig(config)
+  }
+
+  // ============================================
   // Activity Log Operations
   // ============================================
 
@@ -349,6 +364,10 @@ export function useVault() {
     // Metrics Config
     getMetricsConfig,
     saveMetricsConfig,
+
+    // Daily Practice Config
+    getDailyPracticeConfig,
+    saveDailyPracticeConfig,
 
     // Activity Logs
     logActivity,

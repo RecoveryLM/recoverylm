@@ -5,50 +5,89 @@ import {
   AlertTriangle,
   CheckCircle2,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Phone,
+  Mail,
+  MessageCircle
 } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
 import { detectLeadingIndicators } from '@/services/orchestrator'
-import type { DailyMetric, UserProfile, SupportNetwork, EmergencyContact } from '@/types'
+import type { DailyMetric, UserProfile, SupportNetwork, EmergencyContact, DailyPracticeConfig, JournalEntry } from '@/types'
 
 const router = useRouter()
-const { getProfile, getMetrics, getSupportNetwork, getEmergencyContact } = useVault()
+const { getProfile, getMetrics, getSupportNetwork, getEmergencyContact, getDailyPracticeConfig, getJournalEntries } = useVault()
 
 // Real data from vault
 const profile = ref<UserProfile | null>(null)
 const recentMetrics = ref<DailyMetric[]>([])
 const supportNetwork = ref<SupportNetwork | null>(null)
 const emergencyContact = ref<EmergencyContact | null>(null)
+const practiceConfig = ref<DailyPracticeConfig>({ items: [] })
+const todayJournalEntries = ref<JournalEntry[]>([])
 const isLoading = ref(true)
+
+// Calculate trend from recent data (current period vs previous period)
+// More lenient: works with as few as 4 days of data (2 current + 2 previous)
+const calculateTrend = (
+  getValue: (m: DailyMetric) => boolean | number | undefined,
+  isBooleanMetric: boolean
+): 'up' | 'down' | 'stable' => {
+  const total = recentMetrics.value.length
+  if (total < 4) return 'stable'
+
+  // Split data in half for comparison
+  const midpoint = Math.floor(total / 2)
+  const currentPeriod = recentMetrics.value.slice(0, midpoint)
+  const previousPeriod = recentMetrics.value.slice(midpoint)
+
+  if (currentPeriod.length === 0 || previousPeriod.length === 0) return 'stable'
+
+  const currentAvg = isBooleanMetric
+    ? currentPeriod.filter(m => getValue(m) === true).length / currentPeriod.length
+    : currentPeriod.reduce((sum, m) => sum + (Number(getValue(m)) || 0), 0) / currentPeriod.length
+
+  const previousAvg = isBooleanMetric
+    ? previousPeriod.filter(m => getValue(m) === true).length / previousPeriod.length
+    : previousPeriod.reduce((sum, m) => sum + (Number(getValue(m)) || 0), 0) / previousPeriod.length
+
+  const diff = currentAvg - previousAvg
+  // For boolean metrics, 10% change is significant. For scores, use 0.5 threshold
+  const threshold = isBooleanMetric ? 0.1 : 0.5
+  if (Math.abs(diff) < threshold) return 'stable'
+  return diff > 0 ? 'up' : 'down'
+}
 
 // Computed metrics display
 const metricCards = computed(() => {
   if (recentMetrics.value.length === 0) {
     return [
-      { label: 'Sobriety', status: 'success', streak: 0, unit: 'days' },
-      { label: 'Exercise', status: 'warning', streak: 0, unit: 'days' },
-      { label: 'Meditation', status: 'warning', streak: 0, unit: 'days' },
-      { label: 'Mood Avg', status: 'success', streak: 0, unit: '/10' },
+      { label: 'Sobriety', status: 'success', streak: 0, unit: 'days', trend: 'stable' as const },
+      { label: 'Exercise', status: 'warning', streak: 0, unit: 'days', trend: 'stable' as const },
+      { label: 'Meditation', status: 'warning', streak: 0, unit: 'days', trend: 'stable' as const },
+      { label: 'Mood Avg', status: 'success', streak: 0, unit: '/10', trend: 'stable' as const },
     ]
   }
 
-  // Calculate streaks
+  // Calculate streaks from consecutive true values starting from most recent
   let sobrietyStreak = 0
   let exerciseStreak = 0
   let meditationStreak = 0
 
   for (const metric of recentMetrics.value) {
-    if (metric.sobrietyMaintained) sobrietyStreak++
+    if (metric.sobrietyMaintained === true) sobrietyStreak++
     else break
   }
 
   for (const metric of recentMetrics.value) {
-    if (metric.exercise) exerciseStreak++
+    if (metric.exercise === true) exerciseStreak++
     else break
   }
 
   for (const metric of recentMetrics.value) {
-    if (metric.meditation) meditationStreak++
+    if (metric.meditation === true) meditationStreak++
     else break
   }
 
@@ -57,10 +96,34 @@ const metricCards = computed(() => {
     : 0
 
   return [
-    { label: 'Sobriety', status: sobrietyStreak > 0 ? 'success' : 'warning', streak: sobrietyStreak, unit: 'days' },
-    { label: 'Exercise', status: exerciseStreak > 0 ? 'success' : 'warning', streak: exerciseStreak, unit: 'days' },
-    { label: 'Meditation', status: meditationStreak > 0 ? 'success' : 'warning', streak: meditationStreak, unit: 'days' },
-    { label: 'Mood Avg', status: avgMood >= 6 ? 'success' : 'warning', streak: avgMood, unit: '/10' },
+    {
+      label: 'Sobriety',
+      status: sobrietyStreak > 0 ? 'success' : 'warning',
+      streak: sobrietyStreak,
+      unit: 'days',
+      trend: calculateTrend(m => m.sobrietyMaintained, true)
+    },
+    {
+      label: 'Exercise',
+      status: exerciseStreak > 0 ? 'success' : 'warning',
+      streak: exerciseStreak,
+      unit: 'days',
+      trend: calculateTrend(m => m.exercise, true)
+    },
+    {
+      label: 'Meditation',
+      status: meditationStreak > 0 ? 'success' : 'warning',
+      streak: meditationStreak,
+      unit: 'days',
+      trend: calculateTrend(m => m.meditation, true)
+    },
+    {
+      label: 'Mood Avg',
+      status: avgMood >= 6 ? 'success' : 'warning',
+      streak: avgMood,
+      unit: '/10',
+      trend: calculateTrend(m => m.moodScore, false)
+    },
   ]
 })
 
@@ -73,37 +136,89 @@ const leadingIndicators = computed(() => {
   }))
 })
 
-// Today's tasks - derived from metrics
-const todaysTasks = computed(() => {
+// Helper to check if a journal template was completed today
+const isJournalCompletedToday = (templateId: string): boolean => {
+  // Check if any journal entry from today matches the template
+  // We infer template from tags (matching JournalPage logic)
+  const today = new Date().toISOString().split('T')[0]
+  return todayJournalEntries.value.some(entry => {
+    const entryDate = new Date(entry.timestamp).toISOString().split('T')[0]
+    if (entryDate !== today) return false
+
+    // Match template by tags (same logic as getTemplateName in JournalPage)
+    if (templateId === 'cbt-analysis' && entry.tags.includes('distortion-caught')) return true
+    if (templateId === 'evening-review' && entry.tags.includes('gratitude') && entry.tags.includes('victory')) return true
+    if (templateId === 'morning-stoic' && entry.tags.includes('gratitude') && !entry.tags.includes('victory')) return true
+    if (templateId === 'freeform' && entry.tags.length === 0) return true
+
+    return false
+  })
+}
+
+// Helper to check if a widget was completed today
+const isWidgetCompletedToday = (widgetId: string): boolean => {
   const todayMetric = recentMetrics.value[0]
-  return [
-    {
-      id: 1,
-      label: 'Morning Reflection',
-      description: 'Stoic Dichotomy of Control exercise',
-      completed: todayMetric?.meditation ?? false,
-      route: { name: 'activities', query: { activity: 'W_STOIC' } }
-    },
-    {
-      id: 2,
-      label: 'Daily Check-In',
-      description: 'Track your sobriety, mood, and habits',
-      completed: !!todayMetric,
-      route: { name: 'activities' }
-    },
-    {
-      id: 3,
-      label: 'Evening CBT Review',
-      description: 'Evidence examination exercise',
-      completed: todayMetric?.cbtPractice ?? false,
-      route: { name: 'activities', query: { activity: 'W_EVIDENCE' } }
-    },
-  ]
+  if (!todayMetric) return false
+
+  // Map widget IDs to metric fields
+  switch (widgetId) {
+    case 'W_CHECKIN':
+      return true // If todayMetric exists, check-in was done
+    case 'W_EVIDENCE':
+      return todayMetric.cbtPractice ?? false
+    case 'W_STOIC':
+      return todayMetric.meditation ?? false
+    case 'W_URGESURF':
+    case 'W_DENTS':
+    case 'W_TAPE':
+      // These don't have direct metric mappings, check cbtPractice as proxy
+      return todayMetric.cbtPractice ?? false
+    default:
+      return false
+  }
+}
+
+// Today's tasks - derived from practice config
+const todaysTasks = computed(() => {
+  const enabledItems = practiceConfig.value.items
+    .filter(item => item.enabled)
+    .sort((a, b) => a.order - b.order)
+
+  return enabledItems.map((item, index) => {
+    const isJournal = item.type === 'journal'
+    const completed = isJournal
+      ? isJournalCompletedToday(item.journalTemplateId ?? '')
+      : isWidgetCompletedToday(item.widgetId ?? '')
+
+    // Build route with properly typed query params
+    const route: { name: string; query?: Record<string, string> } = isJournal
+      ? { name: 'journal', query: item.journalTemplateId ? { template: item.journalTemplateId } : undefined }
+      : { name: 'activities', query: item.widgetId ? { activity: item.widgetId } : undefined }
+
+    return {
+      id: index + 1,
+      label: item.label,
+      description: item.description,
+      completed,
+      route
+    }
+  })
 })
 
-// Support network display
-const supportPeople = computed(() => {
-  const people: Array<{ id: string; initials: string; name: string; role: string; lastCheckin?: string; nextSession?: string }> = []
+// Support network display with contact info
+interface SupportPersonDisplay {
+  id: string
+  initials: string
+  name: string
+  role: string
+  lastCheckin?: string
+  nextSession?: string
+  contactMethod: 'phone' | 'email' | 'text'
+  contactInfo: string
+}
+
+const supportPeople = computed((): SupportPersonDisplay[] => {
+  const people: SupportPersonDisplay[] = []
 
   if (emergencyContact.value) {
     people.push({
@@ -111,7 +226,9 @@ const supportPeople = computed(() => {
       initials: emergencyContact.value.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
       name: emergencyContact.value.name,
       role: 'Emergency',
-      lastCheckin: 'Set up'
+      lastCheckin: 'Set up',
+      contactMethod: 'phone',
+      contactInfo: emergencyContact.value.phone
     })
   }
 
@@ -122,7 +239,9 @@ const supportPeople = computed(() => {
         initials: person.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
         name: person.name,
         role: person.relationship,
-        lastCheckin: 'Available'
+        lastCheckin: 'Available',
+        contactMethod: person.contactMethod,
+        contactInfo: person.contactInfo
       })
     }
   }
@@ -130,20 +249,49 @@ const supportPeople = computed(() => {
   return people.slice(0, 3) // Show max 3
 })
 
+const getContactHref = (person: SupportPersonDisplay): string => {
+  switch (person.contactMethod) {
+    case 'phone':
+      return `tel:${person.contactInfo}`
+    case 'text':
+      return `sms:${person.contactInfo}`
+    case 'email':
+      return `mailto:${person.contactInfo}`
+    default:
+      return '#'
+  }
+}
+
+const getContactIcon = (method: 'phone' | 'email' | 'text') => {
+  switch (method) {
+    case 'phone': return Phone
+    case 'text': return MessageCircle
+    case 'email': return Mail
+  }
+}
+
 // Load data on mount
 onMounted(async () => {
   try {
-    const [profileData, metricsData, networkData, contactData] = await Promise.all([
+    // Get today's date for journal query
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
+    const [profileData, metricsData, networkData, contactData, practiceData, journalData] = await Promise.all([
       getProfile(),
-      getMetrics({ limit: 7 }),
+      getMetrics({ limit: 30 }), // Increased from 7 for better trend calculation
       getSupportNetwork(),
-      getEmergencyContact()
+      getEmergencyContact(),
+      getDailyPracticeConfig(),
+      getJournalEntries({ after: todayStart.getTime(), limit: 20 })
     ])
 
     profile.value = profileData
     recentMetrics.value = metricsData
     supportNetwork.value = networkData
     emergencyContact.value = contactData
+    practiceConfig.value = practiceData
+    todayJournalEntries.value = journalData
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
   } finally {
@@ -190,14 +338,43 @@ const greeting = computed(() => {
       </div>
 
       <!-- Metric Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div
+        v-if="recentMetrics.length === 0"
+        class="bg-slate-800/50 border border-slate-700 rounded-lg p-6 text-center"
+      >
+        <p class="text-slate-400 mb-3">No metrics tracked yet. Start your daily check-in to see your progress.</p>
+        <router-link
+          to="/activities"
+          class="inline-block text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          Start Tracking
+        </router-link>
+      </div>
+      <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div
           v-for="metric in metricCards"
           :key="metric.label"
           class="bg-slate-800 p-4 rounded-lg border border-slate-700"
+          role="region"
+          :aria-label="`${metric.label}: ${metric.streak} ${metric.unit}`"
         >
-          <div class="text-slate-400 text-xs uppercase tracking-wider mb-1">
-            {{ metric.label }}
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-slate-400 text-xs uppercase tracking-wider">
+              {{ metric.label }}
+            </span>
+            <component
+              v-if="metric.trend !== 'stable'"
+              :is="metric.trend === 'up' ? TrendingUp : TrendingDown"
+              :size="14"
+              :class="metric.trend === 'up' ? 'text-emerald-400' : 'text-amber-400'"
+              :aria-label="metric.trend === 'up' ? 'Trending up' : 'Trending down'"
+            />
+            <Minus
+              v-else
+              :size="14"
+              class="text-slate-500"
+              aria-label="Stable trend"
+            />
           </div>
           <div class="flex items-baseline gap-2">
             <span
@@ -243,8 +420,13 @@ const greeting = computed(() => {
 
       <!-- Quick Chat CTA -->
       <div
-        class="bg-gradient-to-r from-indigo-900/50 to-slate-800 border border-indigo-500/30 p-6 rounded-lg cursor-pointer hover:border-indigo-500/50 transition-colors"
+        class="bg-gradient-to-r from-indigo-900/50 to-slate-800 border border-indigo-500/30 p-6 rounded-lg cursor-pointer hover:border-indigo-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
         @click="goToChat"
+        @keydown.enter="goToChat"
+        @keydown.space.prevent="goToChat"
+        role="button"
+        tabindex="0"
+        aria-label="Talk to Remi - your recovery companion"
       >
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-bold shadow-lg">
@@ -271,13 +453,19 @@ const greeting = computed(() => {
               v-for="task in todaysTasks"
               :key="task.id"
               @click="goToTask(task)"
-              class="flex items-center gap-3 p-3 hover:bg-slate-700/50 rounded-lg cursor-pointer group transition-colors"
+              @keydown.enter="goToTask(task)"
+              @keydown.space.prevent="goToTask(task)"
+              role="button"
+              tabindex="0"
+              :aria-label="`${task.label}: ${task.description}. ${task.completed ? 'Completed' : 'Not completed'}`"
+              class="flex items-center gap-3 p-3 hover:bg-slate-700/50 rounded-lg cursor-pointer group transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
             >
               <div
                 class="w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0"
                 :class="task.completed
                   ? 'bg-emerald-500 border-emerald-500'
                   : 'border-slate-600 group-hover:border-slate-400'"
+                aria-hidden="true"
               >
                 <CheckCircle2 v-if="task.completed" :size="14" class="text-white" />
               </div>
@@ -290,6 +478,7 @@ const greeting = computed(() => {
               <ChevronRight
                 :size="18"
                 class="text-slate-600 group-hover:text-slate-400 transition-colors flex-shrink-0"
+                aria-hidden="true"
               />
             </div>
           </div>
@@ -319,9 +508,14 @@ const greeting = computed(() => {
                   </div>
                 </div>
               </div>
-              <button class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1 rounded transition-colors">
+              <a
+                :href="getContactHref(person)"
+                class="inline-flex items-center gap-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                :aria-label="`Contact ${person.name} via ${person.contactMethod}`"
+              >
+                <component :is="getContactIcon(person.contactMethod)" :size="12" aria-hidden="true" />
                 Contact
-              </button>
+              </a>
             </div>
           </div>
         </div>

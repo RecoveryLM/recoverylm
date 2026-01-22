@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   BookOpen,
   Sun,
@@ -18,6 +18,7 @@ import { generateId, generateSessionId } from '@/types'
 import type { JournalEntry, JournalTag } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const { saveJournalEntry, getJournalEntries }  = useVault()
 
 // Feedback state
@@ -211,7 +212,7 @@ const analyzeExistingEntry = (entry: JournalEntry) => {
   })
 }
 
-// Load journal entries on mount
+// Load journal entries on mount and handle template query param
 onMounted(async () => {
   try {
     journalEntries.value = await getJournalEntries({ limit: 50 })
@@ -219,6 +220,16 @@ onMounted(async () => {
     console.error('Failed to load journal entries:', error)
   } finally {
     isLoadingHistory.value = false
+  }
+
+  // Handle ?template= query param for pre-selection
+  const templateId = route.query.template as string | undefined
+  if (templateId) {
+    const matchingTemplate = templates.find(t => t.id === templateId)
+    if (matchingTemplate) {
+      selectedTemplate.value = matchingTemplate
+      activeTab.value = 'write'
+    }
   }
 })
 </script>

@@ -15,6 +15,7 @@ import { useVault } from '@/composables/useVault'
 import { useAutoLock } from '@/composables/useAutoLock'
 import type { AppSettings } from '@/types'
 import MetricSettingsSection from '@/components/MetricSettingsSection.vue'
+import DailyPracticeSettingsSection from '@/components/DailyPracticeSettingsSection.vue'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
 import RecoveryPhraseModal from '@/components/RecoveryPhraseModal.vue'
 import ImportBackupModal from '@/components/ImportBackupModal.vue'
@@ -217,6 +218,9 @@ const lockVault = () => {
 
       <!-- Metrics Customization -->
       <MetricSettingsSection />
+
+      <!-- Daily Practice Items -->
+      <DailyPracticeSettingsSection />
 
       <!-- Data Management -->
       <div class="bg-slate-800 rounded-lg border border-slate-700 p-6">

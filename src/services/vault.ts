@@ -18,9 +18,10 @@ import type {
   MetricsConfig,
   AppSettings,
   ActivityLog,
-  WidgetId
+  WidgetId,
+  DailyPracticeConfig
 } from '@/types'
-import { DEFAULT_METRICS } from '@/types'
+import { DEFAULT_METRICS, DEFAULT_DAILY_PRACTICE_ITEMS } from '@/types'
 import {
   deriveKey,
   encryptObject,
@@ -485,6 +486,35 @@ export async function saveMetricsConfig(config: MetricsConfig): Promise<void> {
 }
 
 // ============================================
+// Daily Practice Configuration
+// ============================================
+
+export async function getDailyPracticeConfig(): Promise<DailyPracticeConfig> {
+  const { key } = requireUnlocked()
+  const db = getDatabase()
+
+  const entry = await db.dailyPracticeConfig.get('config')
+  if (!entry) {
+    // Return default config if none exists
+    return { items: [...DEFAULT_DAILY_PRACTICE_ITEMS] }
+  }
+
+  return decryptObject<DailyPracticeConfig>(entry.data, key)
+}
+
+export async function saveDailyPracticeConfig(config: DailyPracticeConfig): Promise<void> {
+  const { key, salt } = requireUnlocked()
+  const db = getDatabase()
+
+  const encrypted = await encryptObject(config, key, salt)
+  await db.dailyPracticeConfig.put({
+    id: 'config',
+    data: encrypted,
+    updatedAt: Date.now()
+  })
+}
+
+// ============================================
 // Activity Logs
 // ============================================
 
@@ -695,6 +725,8 @@ export async function changePassword(currentPassword: string, newPassword: strin
       db.chatMessages,
       db.therapistGuidance,
       db.metricsConfig,
+      db.activityLogs,
+      db.dailyPracticeConfig,
       db.settings,
       db.metadata
     ], async () => {
@@ -760,6 +792,22 @@ export async function changePassword(currentPassword: string, newPassword: strin
         const decrypted = await decryptObject<MetricsConfig>(entry.data, oldKey)
         const encrypted = await encryptObject(decrypted, newKey, newSalt)
         await db.metricsConfig.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt activity logs
+      const activityLogs = await db.activityLogs.toArray()
+      for (const entry of activityLogs) {
+        const decrypted = await decryptObject<ActivityLog>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.activityLogs.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt daily practice config
+      const practiceConfig = await db.dailyPracticeConfig.toArray()
+      for (const entry of practiceConfig) {
+        const decrypted = await decryptObject<DailyPracticeConfig>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.dailyPracticeConfig.put({ ...entry, data: encrypted })
       }
 
       // Re-encrypt settings (appSettings, recoveryPhrase)
@@ -834,6 +882,8 @@ export async function resetPasswordWithRecoveryPhrase(phrase: string[], newPassw
       db.chatMessages,
       db.therapistGuidance,
       db.metricsConfig,
+      db.activityLogs,
+      db.dailyPracticeConfig,
       db.settings,
       db.metadata
     ], async () => {
@@ -901,6 +951,22 @@ export async function resetPasswordWithRecoveryPhrase(phrase: string[], newPassw
         await db.metricsConfig.put({ ...entry, data: encrypted })
       }
 
+      // Re-encrypt activity logs
+      const activityLogs = await db.activityLogs.toArray()
+      for (const entry of activityLogs) {
+        const decrypted = await decryptObject<ActivityLog>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.activityLogs.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt daily practice config
+      const practiceConfig = await db.dailyPracticeConfig.toArray()
+      for (const entry of practiceConfig) {
+        const decrypted = await decryptObject<DailyPracticeConfig>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.dailyPracticeConfig.put({ ...entry, data: encrypted })
+      }
+
       // Re-encrypt settings (appSettings, recoveryPhrase)
       const settingsEntries = await db.settings.toArray()
       for (const entry of settingsEntries) {
@@ -945,6 +1011,8 @@ export interface BackupData {
   chatMessages: unknown[]
   therapistGuidance: unknown[]
   metricsConfig: unknown[]
+  dailyPracticeConfig?: unknown[]
+  activityLogs?: unknown[]
   settings?: unknown[]
   metadata: unknown[]
 }
@@ -1002,6 +1070,8 @@ export async function importBackup(backup: BackupData, password: string): Promis
       db.chatMessages,
       db.therapistGuidance,
       db.metricsConfig,
+      db.activityLogs,
+      db.dailyPracticeConfig,
       db.settings,
       db.metadata
     ], async () => {
@@ -1014,6 +1084,8 @@ export async function importBackup(backup: BackupData, password: string): Promis
       await db.chatMessages.clear()
       await db.therapistGuidance.clear()
       await db.metricsConfig.clear()
+      await db.activityLogs.clear()
+      await db.dailyPracticeConfig.clear()
       await db.settings.clear()
       await db.metadata.clear()
 
@@ -1041,6 +1113,12 @@ export async function importBackup(backup: BackupData, password: string): Promis
       }
       if (backup.metricsConfig.length > 0) {
         await db.metricsConfig.bulkPut(backup.metricsConfig as never[])
+      }
+      if (backup.activityLogs && backup.activityLogs.length > 0) {
+        await db.activityLogs.bulkPut(backup.activityLogs as never[])
+      }
+      if (backup.dailyPracticeConfig && backup.dailyPracticeConfig.length > 0) {
+        await db.dailyPracticeConfig.bulkPut(backup.dailyPracticeConfig as never[])
       }
       if (backup.settings && backup.settings.length > 0) {
         await db.settings.bulkPut(backup.settings as never[])
@@ -1075,6 +1153,8 @@ export async function exportEncryptedBackup(): Promise<Blob> {
     chatMessages: await db.chatMessages.toArray(),
     therapistGuidance: await db.therapistGuidance.toArray(),
     metricsConfig: await db.metricsConfig.toArray(),
+    activityLogs: await db.activityLogs.toArray(),
+    dailyPracticeConfig: await db.dailyPracticeConfig.toArray(),
     settings: await db.settings.toArray(),
     metadata: await db.metadata.toArray()
   }
