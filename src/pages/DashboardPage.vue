@@ -4,21 +4,22 @@ import { useRouter } from 'vue-router'
 import {
   AlertTriangle,
   CheckCircle2,
-  MessageSquare,
-  ChevronRight,
   TrendingUp,
   TrendingDown,
   Minus,
   Phone,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Send
 } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
+import { useCrisis } from '@/composables/useCrisis'
 import { detectLeadingIndicators } from '@/services/orchestrator'
-import type { DailyMetric, UserProfile, SupportNetwork, EmergencyContact, DailyPracticeConfig, JournalEntry } from '@/types'
+import type { DailyMetric, UserProfile, SupportNetwork, EmergencyContact, DailyPracticeConfig, JournalEntry, SupportPerson } from '@/types'
 
 const router = useRouter()
 const { getProfile, getMetrics, getSupportNetwork, getEmergencyContact, getDailyPracticeConfig, getJournalEntries } = useVault()
+const { assessMessage, shouldBlockFlow } = useCrisis()
 
 // Real data from vault
 const profile = ref<UserProfile | null>(null)
@@ -29,8 +30,77 @@ const practiceConfig = ref<DailyPracticeConfig>({ items: [] })
 const todayJournalEntries = ref<JournalEntry[]>([])
 const isLoading = ref(true)
 
-// Calculate trend from recent data (current period vs previous period)
-// More lenient: works with as few as 4 days of data (2 current + 2 previous)
+// Quick Capture state
+const quickCapture = ref('')
+const isSending = ref(false)
+
+// ============================================
+// System Status Indicator (HUD)
+// ============================================
+
+type SystemStatus = 'nominal' | 'drift' | 'critical'
+
+const leadingIndicators = computed(() => {
+  return detectLeadingIndicators(recentMetrics.value).map((text, id) => ({
+    id,
+    text,
+    severity: text.includes('Sobriety') ? 'high' : 'medium'
+  }))
+})
+
+const systemStatus = computed((): SystemStatus => {
+  const indicators = leadingIndicators.value.length
+  const recentSobrietyBreak = recentMetrics.value.slice(0, 7)
+    .some(m => m.sobrietyMaintained === false)
+  const avgMood = recentMetrics.value.length > 0
+    ? recentMetrics.value.reduce((sum, m) => sum + m.moodScore, 0) / recentMetrics.value.length
+    : 7
+
+  if (indicators >= 3 || recentSobrietyBreak || avgMood < 4) return 'critical'
+  if (indicators >= 1) return 'drift'
+  return 'nominal'
+})
+
+const sobrietyStreak = computed(() => {
+  let streak = 0
+  for (const m of recentMetrics.value) {
+    if (m.sobrietyMaintained) streak++
+    else break
+  }
+  return streak
+})
+
+const statusDotClass = computed(() => {
+  switch (systemStatus.value) {
+    case 'nominal': return 'bg-emerald-400'
+    case 'drift': return 'bg-amber-400'
+    case 'critical': return 'bg-red-400'
+  }
+})
+
+const statusContainerClass = computed(() => {
+  switch (systemStatus.value) {
+    case 'nominal': return 'bg-emerald-900/20 border-emerald-600/30 animate-pulse-slow'
+    case 'drift': return 'bg-amber-900/20 border-amber-600/30'
+    case 'critical': return 'bg-red-900/20 border-red-600/30 animate-flash'
+  }
+})
+
+const statusMessage = computed(() => {
+  switch (systemStatus.value) {
+    case 'nominal':
+      return `System Nominal. ${sobrietyStreak.value} Day Streak.`
+    case 'drift':
+      return `Drift Detected. ${leadingIndicators.value.length} Leading Indicator${leadingIndicators.value.length > 1 ? 's' : ''} Active.`
+    case 'critical':
+      return 'Support Protocol Recommended.'
+  }
+})
+
+// ============================================
+// Metric Cards (kept from original)
+// ============================================
+
 const calculateTrend = (
   getValue: (m: DailyMetric) => boolean | number | undefined,
   isBooleanMetric: boolean
@@ -38,7 +108,6 @@ const calculateTrend = (
   const total = recentMetrics.value.length
   if (total < 4) return 'stable'
 
-  // Split data in half for comparison
   const midpoint = Math.floor(total / 2)
   const currentPeriod = recentMetrics.value.slice(0, midpoint)
   const previousPeriod = recentMetrics.value.slice(midpoint)
@@ -54,13 +123,11 @@ const calculateTrend = (
     : previousPeriod.reduce((sum, m) => sum + (Number(getValue(m)) || 0), 0) / previousPeriod.length
 
   const diff = currentAvg - previousAvg
-  // For boolean metrics, 10% change is significant. For scores, use 0.5 threshold
   const threshold = isBooleanMetric ? 0.1 : 0.5
   if (Math.abs(diff) < threshold) return 'stable'
   return diff > 0 ? 'up' : 'down'
 }
 
-// Computed metrics display
 const metricCards = computed(() => {
   if (recentMetrics.value.length === 0) {
     return [
@@ -71,13 +138,12 @@ const metricCards = computed(() => {
     ]
   }
 
-  // Calculate streaks from consecutive true values starting from most recent
-  let sobrietyStreak = 0
+  let sobrietyStreakCount = 0
   let exerciseStreak = 0
   let meditationStreak = 0
 
   for (const metric of recentMetrics.value) {
-    if (metric.sobrietyMaintained === true) sobrietyStreak++
+    if (metric.sobrietyMaintained === true) sobrietyStreakCount++
     else break
   }
 
@@ -98,8 +164,8 @@ const metricCards = computed(() => {
   return [
     {
       label: 'Sobriety',
-      status: sobrietyStreak > 0 ? 'success' : 'warning',
-      streak: sobrietyStreak,
+      status: sobrietyStreakCount > 0 ? 'success' : 'warning',
+      streak: sobrietyStreakCount,
       unit: 'days',
       trend: calculateTrend(m => m.sobrietyMaintained, true)
     },
@@ -127,25 +193,16 @@ const metricCards = computed(() => {
   ]
 })
 
-// Leading indicators from orchestrator
-const leadingIndicators = computed(() => {
-  return detectLeadingIndicators(recentMetrics.value).map((text, id) => ({
-    id,
-    text,
-    severity: text.includes('Sobriety') ? 'high' : 'medium'
-  }))
-})
+// ============================================
+// Focus Card (The "Next Right Thing")
+// ============================================
 
-// Helper to check if a journal template was completed today
 const isJournalCompletedToday = (templateId: string): boolean => {
-  // Check if any journal entry from today matches the template
-  // We infer template from tags (matching JournalPage logic)
   const today = new Date().toISOString().split('T')[0]
   return todayJournalEntries.value.some(entry => {
     const entryDate = new Date(entry.timestamp).toISOString().split('T')[0]
     if (entryDate !== today) return false
 
-    // Match template by tags (same logic as getTemplateName in JournalPage)
     if (templateId === 'cbt-analysis' && entry.tags.includes('distortion-caught')) return true
     if (templateId === 'evening-review' && entry.tags.includes('gratitude') && entry.tags.includes('victory')) return true
     if (templateId === 'morning-stoic' && entry.tags.includes('gratitude') && !entry.tags.includes('victory')) return true
@@ -155,15 +212,13 @@ const isJournalCompletedToday = (templateId: string): boolean => {
   })
 }
 
-// Helper to check if a widget was completed today
 const isWidgetCompletedToday = (widgetId: string): boolean => {
   const todayMetric = recentMetrics.value[0]
   if (!todayMetric) return false
 
-  // Map widget IDs to metric fields
   switch (widgetId) {
     case 'W_CHECKIN':
-      return true // If todayMetric exists, check-in was done
+      return true
     case 'W_EVIDENCE':
       return todayMetric.cbtPractice ?? false
     case 'W_STOIC':
@@ -171,14 +226,12 @@ const isWidgetCompletedToday = (widgetId: string): boolean => {
     case 'W_URGESURF':
     case 'W_DENTS':
     case 'W_TAPE':
-      // These don't have direct metric mappings, check cbtPractice as proxy
       return todayMetric.cbtPractice ?? false
     default:
       return false
   }
 }
 
-// Today's tasks - derived from practice config
 const todaysTasks = computed(() => {
   const enabledItems = practiceConfig.value.items
     .filter(item => item.enabled)
@@ -190,7 +243,6 @@ const todaysTasks = computed(() => {
       ? isJournalCompletedToday(item.journalTemplateId ?? '')
       : isWidgetCompletedToday(item.widgetId ?? '')
 
-    // Build route with properly typed query params
     const route: { name: string; query?: Record<string, string> } = isJournal
       ? { name: 'journal', query: item.journalTemplateId ? { template: item.journalTemplateId } : undefined }
       : { name: 'activities', query: item.widgetId ? { activity: item.widgetId } : undefined }
@@ -205,51 +257,60 @@ const todaysTasks = computed(() => {
   })
 })
 
-// Support network display with contact info
-interface SupportPersonDisplay {
-  id: string
-  initials: string
-  name: string
-  role: string
-  lastCheckin?: string
-  nextSession?: string
-  contactMethod: 'phone' | 'email' | 'text'
-  contactInfo: string
-}
-
-const supportPeople = computed((): SupportPersonDisplay[] => {
-  const people: SupportPersonDisplay[] = []
-
-  if (emergencyContact.value) {
-    people.push({
-      id: emergencyContact.value.id,
-      initials: emergencyContact.value.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-      name: emergencyContact.value.name,
-      role: 'Emergency',
-      lastCheckin: 'Set up',
-      contactMethod: 'phone',
-      contactInfo: emergencyContact.value.phone
-    })
-  }
-
-  if (supportNetwork.value) {
-    for (const person of supportNetwork.value.tier1) {
-      people.push({
-        id: person.id,
-        initials: person.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-        name: person.name,
-        role: person.relationship,
-        lastCheckin: 'Available',
-        contactMethod: person.contactMethod,
-        contactInfo: person.contactInfo
-      })
-    }
-  }
-
-  return people.slice(0, 3) // Show max 3
+const focusTask = computed(() => {
+  const incomplete = todaysTasks.value.filter(t => !t.completed)
+  return incomplete[0] || null
 })
 
-const getContactHref = (person: SupportPersonDisplay): string => {
+const allTasksComplete = computed(() => todaysTasks.value.length > 0 && todaysTasks.value.every(t => t.completed))
+
+// ============================================
+// Pillar Health Cards
+// ============================================
+
+// Pillar 1: Program Status
+const pillar1Status = computed(() => {
+  const philosophy = profile.value?.philosophy || 'Recovery'
+  const label = philosophy === 'SMART' ? 'SMART Study'
+    : philosophy === '12Step' ? '12-Step Work'
+    : philosophy === 'RecoveryDharma' ? 'Dharma Practice'
+    : 'Recovery Study'
+
+  // Find most recent day with study=true
+  const lastStudyIndex = recentMetrics.value.findIndex(m => m.study)
+  const daysAgo = lastStudyIndex === -1 ? null : lastStudyIndex
+
+  return { label, daysAgo }
+})
+
+// Pillar 2: Network Accountability
+const pillar2Status = computed(() => {
+  // Find most recent connection day
+  const lastConnectionIndex = recentMetrics.value.findIndex(m => m.connectionTime)
+  const daysAgo = lastConnectionIndex === -1 ? null : lastConnectionIndex
+
+  // Get primary partner
+  const partnerId = supportNetwork.value?.primaryPartner
+  const partner = partnerId
+    ? supportNetwork.value?.tier1.find(p => p.id === partnerId)
+    : supportNetwork.value?.tier1[0]
+
+  return { daysAgo, partner }
+})
+
+const connectionStatusClass = computed(() => {
+  if (pillar2Status.value.daysAgo === null) return 'text-slate-500'
+  if (pillar2Status.value.daysAgo === 0) return 'text-emerald-400'
+  return 'text-amber-400'
+})
+
+const connectionStatusText = computed(() => {
+  if (pillar2Status.value.daysAgo === null) return 'Not tracked'
+  if (pillar2Status.value.daysAgo === 0) return 'Today'
+  return `${pillar2Status.value.daysAgo} day${pillar2Status.value.daysAgo > 1 ? 's' : ''} ago`
+})
+
+const getContactHref = (person: SupportPerson): string => {
   switch (person.contactMethod) {
     case 'phone':
       return `tel:${person.contactInfo}`
@@ -262,24 +323,49 @@ const getContactHref = (person: SupportPersonDisplay): string => {
   }
 }
 
-const getContactIcon = (method: 'phone' | 'email' | 'text') => {
-  switch (method) {
-    case 'phone': return Phone
-    case 'text': return MessageCircle
-    case 'email': return Mail
+// ============================================
+// Quick Capture
+// ============================================
+
+const sendQuickCapture = async () => {
+  const content = quickCapture.value.trim()
+  if (!content || isSending.value) return
+
+  isSending.value = true
+
+  try {
+    // Crisis check before navigation
+    const assessment = await assessMessage(content)
+
+    if (shouldBlockFlow(assessment)) {
+      // Crisis modal will be shown automatically by useCrisis
+      isSending.value = false
+      return
+    }
+
+    // Navigate to chat with message
+    router.push({
+      name: 'chat',
+      query: { quickCapture: encodeURIComponent(content) }
+    })
+  } catch (error) {
+    console.error('Quick capture error:', error)
+    isSending.value = false
   }
 }
 
-// Load data on mount
+// ============================================
+// Data Loading
+// ============================================
+
 onMounted(async () => {
   try {
-    // Get today's date for journal query
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
 
     const [profileData, metricsData, networkData, contactData, practiceData, journalData] = await Promise.all([
       getProfile(),
-      getMetrics({ limit: 30 }), // Increased from 7 for better trend calculation
+      getMetrics({ limit: 30 }),
       getSupportNetwork(),
       getEmergencyContact(),
       getDailyPracticeConfig(),
@@ -299,28 +385,17 @@ onMounted(async () => {
   }
 })
 
-const goToChat = () => {
-  router.push({ name: 'chat' })
-}
-
-const goToCommitment = () => {
-  router.push({ name: 'chat', query: { showWidget: 'W_COMMITMENT', widgetMode: 'view' } })
-}
+// ============================================
+// Navigation
+// ============================================
 
 const goToTask = (task: { route: { name: string; query?: Record<string, string> } }) => {
   router.push(task.route)
 }
 
-const currentDate = computed(() => {
-  return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-})
-
-const greeting = computed(() => {
-  if (profile.value?.displayName) {
-    return `Welcome back, ${profile.value.displayName}`
-  }
-  return 'Welcome back'
-})
+const goToCommitment = () => {
+  router.push({ name: 'chat', query: { showWidget: 'W_COMMITMENT', widgetMode: 'view' } })
+}
 </script>
 
 <template>
@@ -331,26 +406,33 @@ const greeting = computed(() => {
     </div>
 
     <div v-else class="space-y-6 animate-fade-in">
-      <!-- Greeting -->
-      <div class="mb-2">
-        <h1 class="text-xl font-semibold text-white">{{ greeting }}</h1>
-        <p class="text-slate-400 text-sm">{{ currentDate }}</p>
+      <!-- System Status Indicator (HUD) -->
+      <div
+        v-if="recentMetrics.length > 0"
+        class="p-4 rounded-lg border"
+        :class="statusContainerClass"
+        role="status"
+        :aria-label="statusMessage"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full" :class="statusDotClass"></div>
+          <span class="font-mono text-sm text-slate-200">{{ statusMessage }}</span>
+        </div>
+      </div>
+
+      <!-- Empty State for HUD when no metrics -->
+      <div
+        v-else
+        class="p-4 rounded-lg border bg-slate-800/50 border-slate-700"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full bg-slate-500"></div>
+          <span class="font-mono text-sm text-slate-400">No metrics tracked yet. Complete your first check-in to see system status.</span>
+        </div>
       </div>
 
       <!-- Metric Cards -->
-      <div
-        v-if="recentMetrics.length === 0"
-        class="bg-slate-800/50 border border-slate-700 rounded-lg p-6 text-center"
-      >
-        <p class="text-slate-400 mb-3">No metrics tracked yet. Start your daily check-in to see your progress.</p>
-        <router-link
-          to="/activities"
-          class="inline-block text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          Start Tracking
-        </router-link>
-      </div>
-      <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div
           v-for="metric in metricCards"
           :key="metric.label"
@@ -388,7 +470,7 @@ const greeting = computed(() => {
         </div>
       </div>
 
-      <!-- Leading Indicators Warning -->
+      <!-- Leading Indicators Warning (shows when drift/critical) -->
       <div
         v-if="leadingIndicators.length > 0"
         class="bg-amber-900/20 border border-amber-600/30 p-4 rounded-lg"
@@ -418,106 +500,117 @@ const greeting = computed(() => {
         </button>
       </div>
 
-      <!-- Quick Chat CTA -->
-      <div
-        class="bg-gradient-to-r from-indigo-900/50 to-slate-800 border border-indigo-500/30 p-6 rounded-lg cursor-pointer hover:border-indigo-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
-        @click="goToChat"
-        @keydown.enter="goToChat"
-        @keydown.space.prevent="goToChat"
-        role="button"
-        tabindex="0"
-        aria-label="Talk to Remi - your recovery companion"
-      >
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-bold shadow-lg">
-            R
+      <!-- Two Column Section: Focus Card + Pillar Health -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- LEFT: Focus Card -->
+        <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-4">Next Action</h3>
+
+          <template v-if="focusTask">
+            <h4 class="text-white font-semibold text-lg mb-2">{{ focusTask.label }}</h4>
+            <p class="text-slate-400 text-sm mb-4">{{ focusTask.description }}</p>
+            <button
+              @click="goToTask(focusTask)"
+              class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Start Now
+            </button>
+          </template>
+
+          <template v-else-if="allTasksComplete">
+            <div class="text-center py-4">
+              <CheckCircle2 class="text-emerald-400 mx-auto mb-2" :size="32" />
+              <h4 class="text-emerald-400 font-semibold">All Practice Complete</h4>
+              <p class="text-slate-500 text-sm">Great work today!</p>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="text-center py-4">
+              <p class="text-slate-500 text-sm">No practice items configured.</p>
+              <router-link
+                to="/settings"
+                class="text-indigo-400 hover:text-indigo-300 text-sm"
+              >
+                Configure daily practice
+              </router-link>
+            </div>
+          </template>
+        </div>
+
+        <!-- RIGHT: Pillar Health Cards -->
+        <div class="space-y-4">
+          <!-- Pillar 1: Program Status -->
+          <div class="bg-slate-800 rounded-lg p-5 border border-slate-700">
+            <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-3">Pillar 1: Program</h3>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-200">{{ pillar1Status.label }}</span>
+              <span
+                :class="pillar1Status.daysAgo === 0 ? 'text-emerald-400' : pillar1Status.daysAgo === null ? 'text-slate-500' : 'text-amber-400'"
+                class="text-sm"
+              >
+                {{ pillar1Status.daysAgo === null ? 'Not tracked' :
+                   pillar1Status.daysAgo === 0 ? 'Today' :
+                   `${pillar1Status.daysAgo} day${pillar1Status.daysAgo > 1 ? 's' : ''} ago` }}
+              </span>
+            </div>
           </div>
-          <div class="flex-1">
-            <h3 class="text-white font-semibold">Talk to Remi</h3>
-            <p class="text-slate-400 text-sm">Need to process something? I'm here to help.</p>
+
+          <!-- Pillar 2: Network Accountability -->
+          <div class="bg-slate-800 rounded-lg p-5 border border-slate-700">
+            <h3 class="text-slate-400 text-xs uppercase tracking-wider mb-3">Pillar 2: Network</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-200">Connection Time</span>
+                <span :class="connectionStatusClass" class="text-sm">
+                  {{ connectionStatusText }}
+                </span>
+              </div>
+              <div v-if="pillar2Status.partner" class="flex items-center justify-between">
+                <span class="text-slate-400 text-sm">Primary: {{ pillar2Status.partner.name }}</span>
+                <a
+                  :href="getContactHref(pillar2Status.partner)"
+                  class="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  <component
+                    :is="pillar2Status.partner.contactMethod === 'phone' ? Phone : pillar2Status.partner.contactMethod === 'email' ? Mail : MessageCircle"
+                    :size="12"
+                  />
+                  Contact
+                </a>
+              </div>
+              <div v-else class="text-slate-500 text-sm">
+                <router-link to="/network" class="text-indigo-400 hover:text-indigo-300">
+                  Add support contacts
+                </router-link>
+              </div>
+            </div>
           </div>
-          <MessageSquare class="text-indigo-400" :size="24" />
         </div>
       </div>
 
-      <!-- Two Column Section -->
-      <div class="grid md:grid-cols-2 gap-6">
-        <!-- Today's Practice -->
-        <div class="bg-slate-800 rounded-lg p-5 border border-slate-700">
-          <h3 class="text-slate-200 font-medium mb-4 flex items-center justify-between">
-            Today's Practice
-            <span class="text-xs text-slate-500">{{ currentDate }}</span>
-          </h3>
-          <div class="space-y-2">
-            <div
-              v-for="task in todaysTasks"
-              :key="task.id"
-              @click="goToTask(task)"
-              @keydown.enter="goToTask(task)"
-              @keydown.space.prevent="goToTask(task)"
-              role="button"
-              tabindex="0"
-              :aria-label="`${task.label}: ${task.description}. ${task.completed ? 'Completed' : 'Not completed'}`"
-              class="flex items-center gap-3 p-3 hover:bg-slate-700/50 rounded-lg cursor-pointer group transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800"
-            >
-              <div
-                class="w-5 h-5 rounded border flex items-center justify-center transition-colors flex-shrink-0"
-                :class="task.completed
-                  ? 'bg-emerald-500 border-emerald-500'
-                  : 'border-slate-600 group-hover:border-slate-400'"
-                aria-hidden="true"
-              >
-                <CheckCircle2 v-if="task.completed" :size="14" class="text-white" />
-              </div>
-              <div class="flex-1 min-w-0">
-                <span :class="task.completed ? 'text-slate-500 line-through' : 'text-slate-300'">
-                  {{ task.label }}
-                </span>
-                <p class="text-xs text-slate-500 mt-0.5">{{ task.description }}</p>
-              </div>
-              <ChevronRight
-                :size="18"
-                class="text-slate-600 group-hover:text-slate-400 transition-colors flex-shrink-0"
-                aria-hidden="true"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Support Network Status -->
-        <div class="bg-slate-800 rounded-lg p-5 border border-slate-700">
-          <h3 class="text-slate-200 font-medium mb-4">Support Network Status</h3>
-          <div v-if="supportPeople.length === 0" class="text-slate-500 text-sm">
-            No support contacts added yet.
-            <router-link to="/network" class="text-indigo-400 hover:text-indigo-300">Add contacts</router-link>
-          </div>
-          <div v-else class="space-y-4">
-            <div
-              v-for="person in supportPeople"
-              :key="person.id"
-              class="flex items-center justify-between"
-            >
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-indigo-900 text-indigo-300 flex items-center justify-center font-bold text-xs">
-                  {{ person.initials }}
-                </div>
-                <div>
-                  <div class="text-sm text-slate-200">{{ person.name }} ({{ person.role }})</div>
-                  <div class="text-xs text-slate-500">
-                    {{ person.lastCheckin ? `Status: ${person.lastCheckin}` : `Session in ${person.nextSession}` }}
-                  </div>
-                </div>
-              </div>
-              <a
-                :href="getContactHref(person)"
-                class="inline-flex items-center gap-1.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                :aria-label="`Contact ${person.name} via ${person.contactMethod}`"
-              >
-                <component :is="getContactIcon(person.contactMethod)" :size="12" aria-hidden="true" />
-                Contact
-              </a>
-            </div>
-          </div>
+      <!-- Quick Capture Bar -->
+      <div class="bg-slate-800 border border-slate-700 rounded-lg p-4">
+        <div class="flex gap-3">
+          <input
+            v-model="quickCapture"
+            placeholder="Log a thought, urge, or win..."
+            @keydown.enter="sendQuickCapture"
+            :disabled="isSending"
+            class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2
+                   text-slate-200 placeholder-slate-500 focus:outline-none
+                   focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                   disabled:opacity-50"
+          />
+          <button
+            @click="sendQuickCapture"
+            :disabled="!quickCapture.trim() || isSending"
+            class="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700
+                   disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+            aria-label="Send quick capture"
+          >
+            <Send :size="18" />
+          </button>
         </div>
       </div>
     </div>

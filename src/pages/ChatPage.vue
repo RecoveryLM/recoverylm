@@ -88,6 +88,14 @@ onMounted(async () => {
     return
   }
 
+  // Check for quickCapture query param (from Dashboard Quick Capture bar)
+  const quickCaptureContent = route.query.quickCapture as string | undefined
+  if (quickCaptureContent) {
+    router.replace({ name: 'chat', query: {} })
+    await chatSendMessage(decodeURIComponent(quickCaptureContent))
+    return
+  }
+
   // Check for journal entry from query params
   const journalContent = route.query.content as string | undefined
   const journalTemplate = route.query.template as string | undefined
