@@ -7,6 +7,10 @@ import type { AgentTool, ToolUseBlock, ToolResultMessage } from '@/types/agent'
 
 const MODEL = 'claude-sonnet-4-5'
 
+// Check if we're using a proxy or direct API access
+const PROXY_URL = import.meta.env.VITE_API_PROXY_URL as string | undefined
+const USE_PROXY = !!PROXY_URL
+
 // Retryable error types from Anthropic
 const RETRYABLE_ERRORS = ['overloaded_error', 'rate_limit_error', 'api_error']
 
@@ -43,14 +47,23 @@ export class AnthropicProvider implements InferenceProvider {
 
   private getClient(): Anthropic {
     if (!this.client) {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-      if (!apiKey) {
-        throw new Error('VITE_ANTHROPIC_API_KEY is not set')
+      // When using proxy, we don't need a real API key on the client
+      if (USE_PROXY) {
+        this.client = new Anthropic({
+          apiKey: 'proxy-mode', // Placeholder, not used
+          baseURL: PROXY_URL,
+          dangerouslyAllowBrowser: true
+        })
+      } else {
+        const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+        if (!apiKey) {
+          throw new Error('VITE_ANTHROPIC_API_KEY is not set')
+        }
+        this.client = new Anthropic({
+          apiKey,
+          dangerouslyAllowBrowser: true // Required for browser usage
+        })
       }
-      this.client = new Anthropic({
-        apiKey,
-        dangerouslyAllowBrowser: true // Required for browser usage
-      })
     }
     return this.client
   }
@@ -154,6 +167,11 @@ export class AnthropicProvider implements InferenceProvider {
 
   async checkHealth(): Promise<boolean> {
     try {
+      if (USE_PROXY) {
+        // Check proxy health endpoint
+        const response = await fetch(`${PROXY_URL}/health`)
+        return response.ok
+      }
       const client = this.getClient()
       // Just verify we can create a client
       return client !== null
