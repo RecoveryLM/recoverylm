@@ -376,8 +376,9 @@ export class AnthropicProvider implements InferenceProvider {
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
     // Add recent conversation history (last 10 messages)
+    // Filter out messages with empty content to avoid API errors
     for (const msg of context.recentConversation.slice(-10)) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
+      if ((msg.role === 'user' || msg.role === 'assistant') && msg.content?.trim()) {
         messages.push({
           role: msg.role,
           content: msg.content

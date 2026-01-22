@@ -232,10 +232,45 @@ const isWidgetCompletedToday = (widgetId: string): boolean => {
   }
 }
 
+// ============================================
+// Time-Aware Task Scheduling
+// ============================================
+
+type TaskTimeStatus = 'current' | 'upcoming' | 'passed' | 'anytime'
+
+function getTaskTimeStatus(
+  startHour: number | undefined,
+  endHour: number | undefined,
+  currentHour: number
+): TaskTimeStatus {
+  if (startHour === undefined || endHour === undefined) return 'anytime'
+
+  // Handle overnight windows (e.g., 22-6)
+  if (startHour > endHour) {
+    if (currentHour >= startHour || currentHour < endHour) return 'current'
+    if (currentHour < startHour && currentHour >= endHour) return 'upcoming'
+    return 'passed'
+  }
+
+  // Normal same-day window
+  if (currentHour >= startHour && currentHour < endHour) return 'current'
+  if (currentHour < startHour) return 'upcoming'
+  return 'passed'
+}
+
+function formatHour(hour: number): string {
+  if (hour === 0) return '12am'
+  if (hour === 12) return '12pm'
+  if (hour < 12) return `${hour}am`
+  return `${hour - 12}pm`
+}
+
 const todaysTasks = computed(() => {
   const enabledItems = practiceConfig.value.items
     .filter(item => item.enabled)
     .sort((a, b) => a.order - b.order)
+
+  const currentHour = new Date().getHours()
 
   return enabledItems.map((item, index) => {
     const isJournal = item.type === 'journal'
@@ -247,19 +282,53 @@ const todaysTasks = computed(() => {
       ? { name: 'journal', query: item.journalTemplateId ? { template: item.journalTemplateId } : undefined }
       : { name: 'activities', query: item.widgetId ? { activity: item.widgetId } : undefined }
 
+    const timeStatus = getTaskTimeStatus(item.startHour, item.endHour, currentHour)
+    const startsAtLabel = item.startHour !== undefined ? `Starts at ${formatHour(item.startHour)}` : null
+
     return {
       id: index + 1,
       label: item.label,
       description: item.description,
       completed,
-      route
+      route,
+      timeStatus,
+      startsAtLabel,
+      startHour: item.startHour
     }
   })
 })
 
 const focusTask = computed(() => {
   const incomplete = todaysTasks.value.filter(t => !t.completed)
-  return incomplete[0] || null
+  if (incomplete.length === 0) return null
+
+  // Priority 1: Current window tasks (actionable now)
+  const currentTasks = incomplete.filter(t => t.timeStatus === 'current')
+  if (currentTasks.length > 0) {
+    return { ...currentTasks[0], buttonLabel: 'Start Now', isPreview: false }
+  }
+
+  // Priority 2: Upcoming tasks (preview with start time)
+  const upcomingTasks = incomplete
+    .filter(t => t.timeStatus === 'upcoming')
+    .sort((a, b) => (a.startHour ?? 24) - (b.startHour ?? 24))
+  if (upcomingTasks.length > 0) {
+    return { ...upcomingTasks[0], buttonLabel: upcomingTasks[0].startsAtLabel ?? 'Upcoming', isPreview: true }
+  }
+
+  // Priority 3: Anytime tasks
+  const anytimeTasks = incomplete.filter(t => t.timeStatus === 'anytime')
+  if (anytimeTasks.length > 0) {
+    return { ...anytimeTasks[0], buttonLabel: 'Start Now', isPreview: false }
+  }
+
+  // Priority 4: Passed tasks (late night fallback - show as actionable)
+  const passedTasks = incomplete.filter(t => t.timeStatus === 'passed')
+  if (passedTasks.length > 0) {
+    return { ...passedTasks[0], buttonLabel: 'Start Now', isPreview: false }
+  }
+
+  return null
 })
 
 const allTasksComplete = computed(() => todaysTasks.value.length > 0 && todaysTasks.value.every(t => t.completed))
@@ -511,9 +580,12 @@ const goToCommitment = () => {
             <p class="text-slate-400 text-sm mb-4">{{ focusTask.description }}</p>
             <button
               @click="goToTask(focusTask)"
-              class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+              :class="focusTask.isPreview
+                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white'"
+              class="px-4 py-2 rounded-lg transition-colors"
             >
-              Start Now
+              {{ focusTask.buttonLabel }}
             </button>
           </template>
 

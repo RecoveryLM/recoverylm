@@ -6,7 +6,8 @@ const app = express()
 const PORT = process.env.PORT || 8080
 
 // CORS configuration - update for production
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',') || [
+// Supports comma or semicolon as delimiter for env var
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(/[,;]/).map(s => s.trim()) || [
   'http://localhost:5173',
   'http://localhost:4173',
   'https://recoverylm.com',
@@ -101,8 +102,9 @@ app.post('/v1/messages', async (req, res) => {
     res.setHeader('X-Accel-Buffering', 'no') // Disable nginx buffering
     res.flushHeaders()
 
-    // Create streaming request to Anthropic
-    const streamParams: Anthropic.MessageCreateParams = {
+    // Create streaming request to Anthropic using raw stream
+    // This preserves the exact event order expected by the SDK
+    const streamParams: Anthropic.MessageCreateParamsStreaming = {
       model: model || 'claude-sonnet-4-5',
       max_tokens: Math.min(max_tokens || 2048, 4096), // Cap max tokens
       messages,
@@ -117,42 +119,13 @@ app.post('/v1/messages', async (req, res) => {
       streamParams.tools = tools
     }
 
-    const stream_response = anthropic.messages.stream(streamParams)
+    // Use the raw streaming API to get SSE events in correct order
+    const stream = await anthropic.messages.create(streamParams)
 
-    // Forward all events to the client
-    stream_response.on('message', (message) => {
-      res.write(`event: message_start\ndata: ${JSON.stringify({ type: 'message_start', message })}\n\n`)
-    })
-
-    stream_response.on('text', (text) => {
-      res.write(`event: content_block_delta\ndata: ${JSON.stringify({
-        type: 'content_block_delta',
-        delta: { type: 'text_delta', text }
-      })}\n\n`)
-    })
-
-    stream_response.on('contentBlock', (block) => {
-      res.write(`event: content_block_start\ndata: ${JSON.stringify({
-        type: 'content_block_start',
-        content_block: block
-      })}\n\n`)
-    })
-
-    stream_response.on('inputJson', (json, snapshot) => {
-      res.write(`event: content_block_delta\ndata: ${JSON.stringify({
-        type: 'content_block_delta',
-        delta: { type: 'input_json_delta', partial_json: json }
-      })}\n\n`)
-    })
-
-    // Wait for completion
-    const finalMessage = await stream_response.finalMessage()
-
-    // Send final message
-    res.write(`event: message_stop\ndata: ${JSON.stringify({
-      type: 'message_stop',
-      message: finalMessage
-    })}\n\n`)
+    // Forward each event exactly as received
+    for await (const event of stream) {
+      res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+    }
 
     res.end()
 

@@ -6,8 +6,10 @@ import type {
   DailyMetric,
   MetricsConfig,
   AppSettings,
-  DailyPracticeConfig
+  DailyPracticeConfig,
+  DailyPracticeItem
 } from '@/types'
+import { DEFAULT_DAILY_PRACTICE_ITEMS } from '@/types'
 import type { BackupData } from '@/services/vault'
 import * as vault from '@/services/vault'
 
@@ -27,6 +29,16 @@ async function checkInitialState() {
   isUnlocked.value = vault.isUnlocked()
 }
 checkInitialState()
+
+// Merge stored practice items with defaults to inherit new fields
+function mergePracticeItemsWithDefaults(storedItems: DailyPracticeItem[]): DailyPracticeItem[] {
+  return storedItems.map(item => {
+    const defaultItem = DEFAULT_DAILY_PRACTICE_ITEMS.find(d => d.id === item.id)
+    if (!defaultItem) return item
+    // Default fields first, then stored values override
+    return { ...defaultItem, ...item }
+  })
+}
 
 // ============================================
 // Composable
@@ -207,7 +219,11 @@ export function useVault() {
 
   const getDailyPracticeConfig = async (): Promise<DailyPracticeConfig> => {
     if (!isUnlocked.value) return { items: [] }
-    return vault.getDailyPracticeConfig()
+    const config = await vault.getDailyPracticeConfig()
+    if (config.items.length === 0) {
+      return { items: [...DEFAULT_DAILY_PRACTICE_ITEMS] }
+    }
+    return { items: mergePracticeItemsWithDefaults(config.items) }
   }
 
   const saveDailyPracticeConfig = async (config: DailyPracticeConfig): Promise<void> => {
