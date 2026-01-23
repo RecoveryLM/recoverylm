@@ -358,6 +358,9 @@ export interface ContextWindow {
   recentConversation: ChatMessage[]
   relevantHistory: JournalEntry[]
   temporalContext: TemporalContext
+  recentSessionSummaries?: SessionSummary[]
+  supportNetwork?: SupportNetwork
+  activityInsights?: ActivityInsightsResult
 
   // User Input
   currentMessage: string

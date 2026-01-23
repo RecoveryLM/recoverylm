@@ -3,6 +3,8 @@ import type { ContextWindow } from '@/types'
 import type { InferenceProvider, InferenceResponse, StreamCallbacks, AgenticStreamCallbacks, AgenticMessage } from './types'
 import { parseWidgetCommands } from '../widgetParser'
 import { REMMI_SYSTEM_PROMPT } from '@/prompts/remmi'
+import { formatRecentSessionsForContext } from '../sessionSummarizer'
+import { formatActivityInsights } from '../activityInsights'
 import type { AgentTool, ToolUseBlock, ToolResultMessage } from '@/types/agent'
 
 const MODEL = 'claude-sonnet-4-5'
@@ -342,14 +344,99 @@ export class AnthropicProvider implements InferenceProvider {
       contextSections.push(`## Leading Indicators (Risk Signals)\n${context.leadingIndicators.map(i => `- ${i}`).join('\n')}`)
     }
 
-    // Recent metrics summary
+    // Recent metrics - comprehensive view
     if (context.recentMetrics.length > 0) {
       const metrics = context.recentMetrics.slice(0, 7)
+      const lines: string[] = [`## Recent Metrics (last ${metrics.length} days)`]
+
+      // Core habits
       const soberDays = metrics.filter(m => m.sobrietyMaintained).length
       const exerciseDays = metrics.filter(m => m.exercise).length
       const meditationDays = metrics.filter(m => m.meditation).length
+      const studyDays = metrics.filter(m => m.study).length
+      const eatingDays = metrics.filter(m => m.healthyEating).length
+      const connectionDays = metrics.filter(m => m.connectionTime).length
+      const cbtDays = metrics.filter(m => m.cbtPractice).length
+
+      lines.push(`Habits: Sober ${soberDays}/${metrics.length} | Exercise ${exerciseDays}/${metrics.length} | Meditation ${meditationDays}/${metrics.length} | Study ${studyDays}/${metrics.length} | Eating ${eatingDays}/${metrics.length} | Connection ${connectionDays}/${metrics.length} | CBT ${cbtDays}/${metrics.length}`)
+
+      // Mood average
       const avgMood = metrics.reduce((sum, m) => sum + m.moodScore, 0) / metrics.length
-      contextSections.push(`## Recent Metrics (last ${metrics.length} days)\n- Sober: ${soberDays}/${metrics.length} days\n- Exercise: ${exerciseDays}/${metrics.length} days\n- Meditation: ${meditationDays}/${metrics.length} days\n- Average mood: ${avgMood.toFixed(1)}/10`)
+      lines.push(`Average mood: ${avgMood.toFixed(1)}/10`)
+
+      // Optional metrics (only if data exists)
+      const withSleep = metrics.filter(m => m.sleepQuality !== undefined)
+      const withAnxiety = metrics.filter(m => m.anxietyLevel !== undefined)
+      const withCravings = metrics.filter(m => m.cravingIntensity !== undefined)
+
+      if (withSleep.length > 0) {
+        const avgSleep = withSleep.reduce((sum, m) => sum + (m.sleepQuality ?? 0), 0) / withSleep.length
+        lines.push(`Sleep quality: ${avgSleep.toFixed(1)}/10 avg`)
+      }
+      if (withAnxiety.length > 0) {
+        const avgAnxiety = withAnxiety.reduce((sum, m) => sum + (m.anxietyLevel ?? 0), 0) / withAnxiety.length
+        lines.push(`Anxiety level: ${avgAnxiety.toFixed(1)}/10 avg`)
+      }
+      if (withCravings.length > 0) {
+        const avgCravings = withCravings.reduce((sum, m) => sum + (m.cravingIntensity ?? 0), 0) / withCravings.length
+        const recentCraving = metrics[0]?.cravingIntensity
+        lines.push(`Craving intensity: ${avgCravings.toFixed(1)}/10 avg${recentCraving !== undefined ? ` (most recent: ${recentCraving})` : ''}`)
+      }
+
+      contextSections.push(lines.join('\n'))
+    }
+
+    // Activity insights
+    if (context.activityInsights) {
+      const activityContext = formatActivityInsights(context.activityInsights)
+      if (activityContext) {
+        contextSections.push(`## Activity Usage\n${activityContext}`)
+      }
+    }
+
+    // Recent session history
+    if (context.recentSessionSummaries && context.recentSessionSummaries.length > 0) {
+      const sessionHistory = formatRecentSessionsForContext(context.recentSessionSummaries)
+      let section = `## Recent Session History\n${sessionHistory}`
+
+      // Add actionable notes for unresolved concerns
+      const lastSession = context.recentSessionSummaries[0]
+      if (lastSession.endState === 'unresolved') {
+        section += '\n\nNote: Last session ended with unresolved concerns. Consider checking in about how they\'re doing.'
+      }
+
+      contextSections.push(section)
+    }
+
+    // Support network context
+    if (context.supportNetwork) {
+      const { tier1, tier2, primaryPartner, backupPartner } = context.supportNetwork
+
+      if (tier1.length > 0 || tier2.length > 0) {
+        let networkSection = '## Support Network\n'
+
+        if (tier1.length > 0) {
+          networkSection += '### Core Support (Tier 1)\n'
+          for (const person of tier1) {
+            const isPrimary = person.id === primaryPartner
+            const isBackup = person.id === backupPartner
+            let roleNote = ''
+            if (isPrimary) roleNote = ' (Primary accountability partner)'
+            else if (isBackup) roleNote = ' (Backup accountability partner)'
+            networkSection += `- **${person.name}** - ${person.relationship}${roleNote}\n`
+          }
+        }
+
+        if (tier2.length > 0) {
+          networkSection += '### Extended Support (Tier 2)\n'
+          for (const person of tier2) {
+            networkSection += `- **${person.name}** - ${person.relationship}\n`
+          }
+        }
+
+        networkSection += '\nYou can suggest the user reach out to these people when appropriate.'
+        contextSections.push(networkSection)
+      }
     }
 
     // Crisis context injection

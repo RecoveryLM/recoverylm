@@ -19,7 +19,7 @@ import {
 } from '@/types'
 import * as vault from '@/services/vault'
 import { REMMI_SYSTEM_PROMPT } from '@/prompts/remmi'
-import { getPreviousSessionSummary, formatSessionSummary } from '@/services/sessionSummarizer'
+import { getPreviousSessionSummary, formatSessionSummary, getRecentSessionSummaries } from '@/services/sessionSummarizer'
 import { getActivityInsights, formatActivityInsights } from '@/services/activityInsights'
 
 /**
@@ -168,13 +168,14 @@ export function buildTemporalContext(
  */
 export async function buildGreetingContext(): Promise<ContextWindow> {
   // Fetch data in parallel (including new context sources)
-  const [profile, metrics, guidance, recentSessionIds, activityData, previousSession] = await Promise.all([
+  const [profile, metrics, guidance, recentSessionIds, activityData, previousSession, supportNetwork] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
     vault.getRecentSessions(5),
     getActivityInsights(),
-    getPreviousSessionSummary()
+    getPreviousSessionSummary(),
+    vault.getSupportNetwork()
   ])
 
   // Calculate derived data
@@ -268,6 +269,8 @@ Just respond with the greeting message directly.`
     recentConversation: [],
     relevantHistory: [],
     temporalContext,
+    supportNetwork: supportNetwork ?? undefined,
+    activityInsights: activityData,
     currentMessage: greetingInstruction
   }
 }
@@ -281,11 +284,14 @@ export async function buildContextWindow(
   crisisContext?: { level: CrisisLevel; action: CrisisAction }
 ): Promise<ContextWindow> {
   // Fetch data in parallel
-  const [profile, metrics, guidance, recentChat] = await Promise.all([
+  const [profile, metrics, guidance, recentChat, sessionSummaries, supportNetwork, activityData] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
-    vault.getChatHistory(currentSessionId)
+    vault.getChatHistory(currentSessionId),
+    getRecentSessionSummaries(2),
+    vault.getSupportNetwork(),
+    getActivityInsights()
   ])
 
   // Calculate derived data
@@ -306,6 +312,9 @@ export async function buildContextWindow(
     recentConversation: recentChat,
     relevantHistory,
     temporalContext,
+    recentSessionSummaries: sessionSummaries.length > 0 ? sessionSummaries : undefined,
+    supportNetwork: supportNetwork ?? undefined,
+    activityInsights: activityData,
     currentMessage,
     crisisContext
   }
