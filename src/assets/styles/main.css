@@ -17,6 +17,22 @@
     overflow: hidden;
   }
 
+  /* Landing page override - enable scrolling */
+  html.landing-page,
+  body.landing-page,
+  html.landing-page #app {
+    height: auto;
+    overflow: auto;
+  }
+
+  /* Onboarding page override - enable scrolling */
+  html.onboarding-page,
+  body.onboarding-page,
+  html.onboarding-page #app {
+    height: auto;
+    overflow: auto;
+  }
+
   /* Selection color */
   ::selection {
     background-color: rgb(79 70 229 / 0.3); /* indigo-600/30 */

@@ -5,6 +5,9 @@ import Anthropic from '@anthropic-ai/sdk'
 const app = express()
 const PORT = process.env.PORT || 8080
 
+// Trust proxy headers (Cloud Run sits behind a load balancer)
+app.set('trust proxy', true)
+
 // CORS configuration - update for production
 // Supports comma or semicolon as delimiter for env var
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(/[,;]/).map(s => s.trim()) || [
@@ -16,8 +19,11 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(/[,;]/).map(s => s.tr
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true)
+    // Reject requests with no origin (blocks curl/scripts)
+    if (!origin) {
+      callback(new Error('No origin header'))
+      return
+    }
     if (ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true)
     }
@@ -31,7 +37,7 @@ app.use(express.json({ limit: '1mb' }))
 // Rate limiting state (simple in-memory, use Redis for production scaling)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const RATE_LIMIT_WINDOW_MS = 60 * 1000 // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 30 // 30 requests per minute per IP
+const RATE_LIMIT_MAX_REQUESTS = 10 // 10 requests per minute per IP
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()

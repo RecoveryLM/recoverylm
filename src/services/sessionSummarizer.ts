@@ -274,3 +274,70 @@ export function formatSessionSummary(summary: SessionSummary | null): string {
 
   return parts.join('\n')
 }
+
+/**
+ * Get summaries for the most recent N previous sessions (excluding today).
+ * Returns empty array on error for graceful degradation.
+ */
+export async function getRecentSessionSummaries(count: number = 2): Promise<SessionSummary[]> {
+  try {
+    // Fetch more sessions than needed to account for filtering out today
+    const recentSessionIds = await vault.getRecentSessions(count + 3)
+    const todayStr = formatDate(new Date())
+    const summaries: SessionSummary[] = []
+
+    for (const sessionId of recentSessionIds) {
+      if (summaries.length >= count) break
+
+      const messages = await vault.getChatHistory(sessionId)
+      if (messages.length === 0) continue
+
+      // Skip today's session
+      const sessionDate = formatDate(new Date(messages[0].timestamp))
+      if (sessionDate === todayStr) continue
+
+      // Summarize the session
+      const summary = await summarizeSession(sessionId)
+      if (summary) {
+        summaries.push(summary)
+      }
+    }
+
+    return summaries
+  } catch (error) {
+    console.error('[getRecentSessionSummaries] Error:', error)
+    return []
+  }
+}
+
+/**
+ * Format session summaries for compact inclusion in system prompt context.
+ * One line per session for token efficiency.
+ */
+export function formatRecentSessionsForContext(summaries: SessionSummary[]): string {
+  if (summaries.length === 0) return ''
+
+  const lines: string[] = []
+
+  for (const summary of summaries) {
+    const parts: string[] = [summary.date]
+
+    if (summary.themes.length > 0) {
+      parts.push(`Themes: ${summary.themes.slice(0, 3).join(', ')}`)
+    }
+
+    if (summary.emotionalArc !== 'unknown') {
+      parts.push(`Ended: ${summary.emotionalArc}`)
+    }
+
+    if (summary.endState === 'unresolved' && summary.userIntentions?.length) {
+      parts.push(`(unresolved: ${summary.userIntentions[0]})`)
+    } else if (summary.endState === 'unresolved') {
+      parts.push('(unresolved concerns)')
+    }
+
+    lines.push(`- ${parts.join(' | ')}`)
+  }
+
+  return lines.join('\n')
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { OnboardingStep, RecoveryPhilosophy, RecoveryStage, VulnerabilityPattern } from '@/types'
 import { generateId, today } from '@/types'
@@ -7,6 +7,17 @@ import { useVault } from '@/composables/useVault'
 
 const router = useRouter()
 const { saveProfile, saveEmergencyContact: saveEmergencyContactToVault } = useVault()
+
+// Enable scrolling on mobile by overriding global overflow:hidden
+onMounted(() => {
+  document.documentElement.classList.add('onboarding-page')
+  document.body.classList.add('onboarding-page')
+})
+
+onUnmounted(() => {
+  document.documentElement.classList.remove('onboarding-page')
+  document.body.classList.remove('onboarding-page')
+})
 
 // Onboarding state
 const currentStep = ref<OnboardingStep>('welcome')
