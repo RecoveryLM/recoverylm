@@ -226,46 +226,6 @@ Always run `npm run typecheck` before committing changes.
 
 ---
 
-## Deployment
-
-### Self-Hosting (Bring Your Own API Key)
-
-The simplest option—deploy the static frontend and use your own Anthropic API key.
-
-1. Build the frontend: `npm run build`
-2. Deploy the `dist/` folder to any static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages)
-3. Set `VITE_ANTHROPIC_API_KEY` as an environment variable during build
-
-### Hosted Version (With API Proxy)
-
-To run a public instance where users don't need their own API keys, you'll need to deploy the API proxy.
-
-**Frontend:** Deploy the built Vue app to static hosting.
-
-**API Proxy:** The `server/` directory contains a streaming proxy for the Anthropic API.
-
-```bash
-cd server
-npm install
-npm run build
-```
-
-Deploy to Cloud Run:
-
-```bash
-gcloud run deploy recoverylm-proxy \
-  --source . \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars "ANTHROPIC_API_KEY=your_key,ALLOWED_ORIGINS=https://yourdomain.com"
-```
-
-Then configure the frontend to use your proxy URL instead of calling Anthropic directly.
-
-See **[server/README.md](server/README.md)** for detailed proxy documentation.
-
----
-
 ## Contributing
 
 Contributions are welcome. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
