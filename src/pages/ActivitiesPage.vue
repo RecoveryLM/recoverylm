@@ -495,7 +495,7 @@ const handleActivityComplete = async (result: unknown) => {
 const discussWithRemi = () => {
   if (activeActivity.value && activityResult.value) {
     setResult(activeActivity.value.id, activeActivity.value.name, activityResult.value)
-    router.push('/chat')
+    router.push({ name: 'chat' })
   }
 }
 </script>
