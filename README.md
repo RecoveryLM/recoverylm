@@ -185,7 +185,7 @@ Evidence-based CBT and SMART techniques embedded directly in the conversation:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/recoverylm.git
+git clone https://github.com/RecoveryLM/recoverylm.git
 cd recoverylm
 
 # Install dependencies
