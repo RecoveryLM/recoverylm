@@ -297,7 +297,7 @@ onMounted(async () => {
           Start tracking your recovery progress by completing a daily check-in with Remi. Your habits, mood, and progress will appear here.
         </p>
         <router-link
-          to="/chat"
+          :to="{ name: 'activities', query: { activity: 'W_CHECKIN' } }"
           class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition-colors"
         >
           Start Your First Check-in
