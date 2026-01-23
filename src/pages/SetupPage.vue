@@ -45,11 +45,11 @@ const createAccount = async () => {
 
   try {
     // Create the encrypted vault with the password
-    const success = await create(password.value)
+    const result = await create(password.value)
 
-    if (success) {
-      // Go to onboarding
-      router.push({ name: 'onboarding' })
+    if (result.success) {
+      // Go to recovery phrase setup (phrase will be loaded from vault)
+      router.push({ name: 'setup-recovery-phrase' })
     } else {
       error.value = 'Failed to create vault. Please try again.'
     }

@@ -5,6 +5,12 @@ import { useVault } from '@/composables/useVault'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
+    name: 'welcome',
+    component: () => import('@/pages/LandingPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/app',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
       {
@@ -68,6 +74,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/SetupPage.vue')
   },
   {
+    path: '/setup/recovery-phrase',
+    name: 'setup-recovery-phrase',
+    component: () => import('@/pages/RecoveryPhraseSetupPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/recovery',
     name: 'recovery',
     component: () => import('@/pages/RecoveryPage.vue')
@@ -96,13 +108,19 @@ router.beforeEach(async (to, _from, next) => {
     }
   }
 
-  // If user is unlocked and tries to go to unlock/setup/recovery, redirect to dashboard
-  if (isUnlocked.value && (to.name === 'unlock' || to.name === 'setup' || to.name === 'recovery')) {
+  // If user is unlocked and tries to go to unlock/setup/recovery/welcome, redirect appropriately
+  if (isUnlocked.value && (to.name === 'unlock' || to.name === 'setup' || to.name === 'recovery' || to.name === 'welcome')) {
+    // Check if user has completed onboarding
+    const profile = await getProfile()
+    if (!profile?.onboardingComplete) {
+      // Allow setup-recovery-phrase page during onboarding flow
+      return next({ name: 'onboarding' })
+    }
     return next({ name: 'dashboard' })
   }
 
-  // If user hasn't set up vault and tries to go somewhere other than unlock/setup/recovery, redirect to unlock
-  if (needsSetup.value && to.name !== 'unlock' && to.name !== 'setup' && to.name !== 'recovery') {
+  // If user hasn't set up vault and tries to go somewhere other than unlock/setup/setup-recovery-phrase/recovery/welcome, redirect to unlock
+  if (needsSetup.value && to.name !== 'unlock' && to.name !== 'setup' && to.name !== 'setup-recovery-phrase' && to.name !== 'recovery' && to.name !== 'welcome') {
     return next({ name: 'unlock' })
   }
 

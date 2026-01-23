@@ -6,6 +6,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useChat } from '@/composables/useChat'
 import { useCrisis } from '@/composables/useCrisis'
 import { useActivityResult } from '@/composables/useActivityResult'
+import { useJournalContext } from '@/composables/useJournalContext'
 import { useVault } from '@/composables/useVault'
 import type { WidgetId, WidgetCommand, DailyMetric } from '@/types'
 import { Sparkles } from 'lucide-vue-next'
@@ -27,6 +28,7 @@ const route = useRoute()
 const { messages, isLoading, isStreaming, isGeneratingGreeting, error, agentState, sendMessage: chatSendMessage, startNewSession, loadTodaySession, generateGreeting, showWidget, completeWidget } = useChat()
 const { showCrisisModal } = useCrisis()
 const { consumeResult } = useActivityResult()
+const { consumePendingContext } = useJournalContext()
 const { userProfile } = useVault()
 
 const goToActivities = () => {
@@ -96,19 +98,15 @@ onMounted(async () => {
     return
   }
 
-  // Check for journal entry from query params
-  const journalContent = route.query.content as string | undefined
-  const journalTemplate = route.query.template as string | undefined
+  // Check for journal entry from composable (avoids URL length limits)
+  const journalContext = consumePendingContext()
 
-  if (journalContent && journalTemplate) {
-    // Clear the query params from URL without navigation
-    router.replace({ name: 'chat', query: {} })
-
+  if (journalContext) {
     // Start a new session for the journal analysis
     startNewSession()
 
     // Send the journal content to Remi
-    const contextMessage = buildJournalContextMessage(journalTemplate, journalContent)
+    const contextMessage = buildJournalContextMessage(journalContext.template, journalContext.content)
     await chatSendMessage(contextMessage)
     return
   }
@@ -375,7 +373,7 @@ const handleNewChat = () => {
         </div>
 
         <!-- Assistant Message (hide empty placeholder during thinking phase) -->
-        <div v-else-if="message.role === 'assistant' && !(message.content === '' && isLoading && !isStreaming)" class="flex justify-start items-start gap-3 animate-slide-up">
+        <div v-else-if="message.role === 'assistant' && !(message.content === '' && ((isLoading && !isStreaming) || isGeneratingGreeting))" class="flex justify-start items-start gap-3 animate-slide-up">
           <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 flex-shrink-0 flex items-center justify-center text-white font-bold text-xs shadow-lg">
             R
           </div>

@@ -14,12 +14,14 @@ import {
   AlertCircle
 } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
+import { useJournalContext } from '@/composables/useJournalContext'
 import { generateId, generateSessionId } from '@/types'
 import type { JournalEntry, JournalTag } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
 const { saveJournalEntry, getJournalEntries }  = useVault()
+const { setPendingContext } = useJournalContext()
 
 // Feedback state
 const saveSuccess = ref(false)
@@ -109,15 +111,15 @@ const analyzeWithRemi = async () => {
 
     await saveJournalEntry(entry)
 
-    // Navigate to chat with context
-    router.push({
-      name: 'chat',
-      query: {
-        journalEntry: entry.id,
-        template: selectedTemplate.value.name,
-        content: entryContent.value
-      }
+    // Store context in composable (avoids URL length limits)
+    setPendingContext({
+      journalId: entry.id,
+      template: selectedTemplate.value.name,
+      content: entryContent.value
     })
+
+    // Navigate to chat
+    router.push({ name: 'chat' })
   } catch (error) {
     console.error('Failed to save journal entry:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -202,14 +204,15 @@ const getTemplateName = (entry: JournalEntry): string => {
 
 // Analyze an existing entry from history
 const analyzeExistingEntry = (entry: JournalEntry) => {
-  router.push({
-    name: 'chat',
-    query: {
-      journalEntry: entry.id,
-      template: getTemplateName(entry),
-      content: entry.content
-    }
+  // Store context in composable (avoids URL length limits)
+  setPendingContext({
+    journalId: entry.id,
+    template: getTemplateName(entry),
+    content: entry.content
   })
+
+  // Navigate to chat
+  router.push({ name: 'chat' })
 }
 
 // Load journal entries on mount and handle template query param

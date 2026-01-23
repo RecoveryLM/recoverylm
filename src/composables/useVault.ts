@@ -48,19 +48,19 @@ export function useVault() {
   /**
    * Create a new vault with password
    */
-  const create = async (password: string): Promise<boolean> => {
+  const create = async (password: string): Promise<{ success: boolean; recoveryPhrase?: string[] }> => {
     isLoading.value = true
     error.value = null
 
     try {
-      await vault.createVault(password)
+      const result = await vault.createVault(password)
       isUnlocked.value = true
       needsSetup.value = false
-      return true
+      return { success: true, recoveryPhrase: result.recoveryPhrase }
     } catch (e) {
       error.value = 'Failed to create vault'
       console.error('Create vault error:', e)
-      return false
+      return { success: false }
     } finally {
       isLoading.value = false
     }
