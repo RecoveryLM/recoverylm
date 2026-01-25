@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source files
 COPY . .
 
-# Build argument for proxy URL (passed via --build-arg in CI/CD)
-ARG VITE_API_PROXY_URL
+# Build argument for proxy URL (defaults to production proxy)
+ARG VITE_API_PROXY_URL=https://recoverylm-proxy-627579746441.us-central1.run.app
 ENV VITE_API_PROXY_URL=$VITE_API_PROXY_URL
 
 # Build the app
