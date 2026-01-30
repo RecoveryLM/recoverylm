@@ -133,24 +133,35 @@ const getLastUsedText = (activityId: string): string | null => {
   return `Last: ${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`
 }
 
-// Calculate streak for each metric
+// Calculate streak for each metric, checking consecutive calendar days
 const getStreakForMetric = (metricId: string): number => {
-  let streak = 0
-  const sortedMetrics = [...historicalMetrics.value].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  if (historicalMetrics.value.length === 0) return 0
 
-  for (const metric of sortedMetrics) {
+  // Create a map of date -> metric for O(1) lookups
+  const metricsMap = new Map(historicalMetrics.value.map(m => [m.date, m]))
+
+  let streak = 0
+  const checkDate = new Date()
+  checkDate.setHours(0, 0, 0, 0)
+
+  while (true) {
+    const dateStr = formatDate(checkDate)
+    const metric = metricsMap.get(dateStr)
+
+    // No record for this day = streak broken
+    if (!metric) break
+
     const value = defaultMetricIds.includes(metricId)
       ? metric[metricId as keyof DailyMetric]
       : metric.customMetrics?.[metricId]
 
-    if (value === true) {
-      streak++
-    } else {
-      break
-    }
+    // Value is not true = streak broken
+    if (value !== true) break
+
+    streak++
+    checkDate.setDate(checkDate.getDate() - 1)
   }
+
   return streak
 }
 
