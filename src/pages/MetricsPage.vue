@@ -89,27 +89,54 @@ const getHeatmapForMetric = (metricId: string) => {
   return data
 }
 
-// Calculate streak for a metric
+// Calculate streak for a metric - requires consecutive calendar days
 const getStreakForMetric = (metricId: string): number => {
-  let streak = 0
-  const sortedMetrics = [...historicalMetrics.value].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  if (historicalMetrics.value.length === 0) return 0
 
-  for (const metric of sortedMetrics) {
+  // Create a map of date -> metric for O(1) lookups
+  const metricsMap = new Map(historicalMetrics.value.map(m => [m.date, m]))
+
+  let streak = 0
+  const todayStr = formatDate(new Date())
+  const checkDate = new Date()
+  checkDate.setHours(0, 0, 0, 0)
+
+  // Check if today is already completed - if so, include it
+  const todayMetric = metricsMap.get(todayStr)
+  const todayValue = todayMetric
+    ? (defaultMetricIds.includes(metricId)
+        ? todayMetric[metricId as keyof DailyMetric]
+        : todayMetric.customMetrics?.[metricId])
+    : undefined
+
+  if (todayValue === true) {
+    // Today is done, count from today
+    streak = 1
+    checkDate.setDate(checkDate.getDate() - 1)
+  } else {
+    // Today not done yet, start counting from yesterday
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+
+  // Count consecutive completed days going backward
+  while (true) {
+    const dateStr = formatDate(checkDate)
+    const metric = metricsMap.get(dateStr)
+
+    // No record for this day = streak ends (gap in data)
+    if (!metric) break
+
     const value = defaultMetricIds.includes(metricId)
       ? metric[metricId as keyof DailyMetric]
       : metric.customMetrics?.[metricId]
 
-    // Skip days where this specific metric wasn't tracked
-    if (value === undefined) continue
+    // Value is not true = streak ends
+    if (value !== true) break
 
-    if (value === true) {
-      streak++
-    } else {
-      break
-    }
+    streak++
+    checkDate.setDate(checkDate.getDate() - 1)
   }
+
   return streak
 }
 

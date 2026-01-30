@@ -133,24 +133,55 @@ const getLastUsedText = (activityId: string): string | null => {
   return `Last: ${Math.floor(days / 30)} month${Math.floor(days / 30) > 1 ? 's' : ''} ago`
 }
 
-// Calculate streak for each metric
+// Calculate streak for each metric, checking consecutive calendar days
+// Streak counts completed days - today only adds to streak if already done
 const getStreakForMetric = (metricId: string): number => {
-  let streak = 0
-  const sortedMetrics = [...historicalMetrics.value].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  )
+  if (historicalMetrics.value.length === 0) return 0
 
-  for (const metric of sortedMetrics) {
+  // Create a map of date -> metric for O(1) lookups
+  const metricsMap = new Map(historicalMetrics.value.map(m => [m.date, m]))
+
+  let streak = 0
+  const todayStr = today()
+  const checkDate = new Date()
+  checkDate.setHours(0, 0, 0, 0)
+
+  // Check if today is already completed - if so, include it
+  const todayMetric = metricsMap.get(todayStr)
+  const todayValue = todayMetric
+    ? (defaultMetricIds.includes(metricId)
+        ? todayMetric[metricId as keyof DailyMetric]
+        : todayMetric.customMetrics?.[metricId])
+    : undefined
+
+  if (todayValue === true) {
+    // Today is done, count from today
+    streak = 1
+    checkDate.setDate(checkDate.getDate() - 1)
+  } else {
+    // Today not done yet, start counting from yesterday
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+
+  // Count consecutive completed days going backward
+  while (true) {
+    const dateStr = formatDate(checkDate)
+    const metric = metricsMap.get(dateStr)
+
+    // No record for this day = streak ends
+    if (!metric) break
+
     const value = defaultMetricIds.includes(metricId)
       ? metric[metricId as keyof DailyMetric]
       : metric.customMetrics?.[metricId]
 
-    if (value === true) {
-      streak++
-    } else {
-      break
-    }
+    // Value is not true = streak ends
+    if (value !== true) break
+
+    streak++
+    checkDate.setDate(checkDate.getDate() - 1)
   }
+
   return streak
 }
 

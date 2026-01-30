@@ -61,13 +61,47 @@ const systemStatus = computed((): SystemStatus => {
   return 'nominal'
 })
 
-const sobrietyStreak = computed(() => {
+// Helper to calculate streaks with consecutive calendar day checking
+// Streak counts completed days - today only adds to streak if already done
+const calculateStreak = (getValue: (m: DailyMetric) => boolean | undefined): number => {
+  if (recentMetrics.value.length === 0) return 0
+
+  // Create a map of date -> metric for O(1) lookups
+  const metricsMap = new Map(recentMetrics.value.map(m => [m.date, m]))
+
   let streak = 0
-  for (const m of recentMetrics.value) {
-    if (m.sobrietyMaintained) streak++
-    else break
+  const todayStr = formatDate(new Date())
+  const checkDate = new Date()
+  checkDate.setHours(0, 0, 0, 0)
+
+  // Check if today is already completed - if so, include it
+  const todayMetric = metricsMap.get(todayStr)
+  if (todayMetric && getValue(todayMetric) === true) {
+    // Today is done, count from today
+    streak = 1
+    checkDate.setDate(checkDate.getDate() - 1)
+  } else {
+    // Today not done yet, start counting from yesterday
+    checkDate.setDate(checkDate.getDate() - 1)
   }
+
+  // Count consecutive completed days going backward
+  while (true) {
+    const dateStr = formatDate(checkDate)
+    const metric = metricsMap.get(dateStr)
+
+    // No record for this day OR value is not true = streak ends
+    if (!metric || getValue(metric) !== true) break
+
+    streak++
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+
   return streak
+}
+
+const sobrietyStreak = computed(() => {
+  return calculateStreak(m => m.sobrietyMaintained)
 })
 
 const statusDotClass = computed(() => {
@@ -138,24 +172,10 @@ const metricCards = computed(() => {
     ]
   }
 
-  let sobrietyStreakCount = 0
-  let exerciseStreak = 0
-  let meditationStreak = 0
-
-  for (const metric of recentMetrics.value) {
-    if (metric.sobrietyMaintained === true) sobrietyStreakCount++
-    else break
-  }
-
-  for (const metric of recentMetrics.value) {
-    if (metric.exercise === true) exerciseStreak++
-    else break
-  }
-
-  for (const metric of recentMetrics.value) {
-    if (metric.meditation === true) meditationStreak++
-    else break
-  }
+  // Use calculateStreak which checks consecutive calendar days
+  const sobrietyStreakCount = calculateStreak(m => m.sobrietyMaintained)
+  const exerciseStreak = calculateStreak(m => m.exercise)
+  const meditationStreak = calculateStreak(m => m.meditation)
 
   const avgMood = recentMetrics.value.length > 0
     ? Math.round(recentMetrics.value.reduce((sum, m) => sum + m.moodScore, 0) / recentMetrics.value.length * 10) / 10
