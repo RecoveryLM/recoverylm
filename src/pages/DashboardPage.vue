@@ -62,6 +62,7 @@ const systemStatus = computed((): SystemStatus => {
 })
 
 // Helper to calculate streaks with consecutive calendar day checking
+// Streak counts completed days - today only adds to streak if already done
 const calculateStreak = (getValue: (m: DailyMetric) => boolean | undefined): number => {
   if (recentMetrics.value.length === 0) return 0
 
@@ -69,14 +70,27 @@ const calculateStreak = (getValue: (m: DailyMetric) => boolean | undefined): num
   const metricsMap = new Map(recentMetrics.value.map(m => [m.date, m]))
 
   let streak = 0
+  const todayStr = formatDate(new Date())
   const checkDate = new Date()
   checkDate.setHours(0, 0, 0, 0)
 
+  // Check if today is already completed - if so, include it
+  const todayMetric = metricsMap.get(todayStr)
+  if (todayMetric && getValue(todayMetric) === true) {
+    // Today is done, count from today
+    streak = 1
+    checkDate.setDate(checkDate.getDate() - 1)
+  } else {
+    // Today not done yet, start counting from yesterday
+    checkDate.setDate(checkDate.getDate() - 1)
+  }
+
+  // Count consecutive completed days going backward
   while (true) {
     const dateStr = formatDate(checkDate)
     const metric = metricsMap.get(dateStr)
 
-    // No record for this day OR value is not true = streak broken
+    // No record for this day OR value is not true = streak ends
     if (!metric || getValue(metric) !== true) break
 
     streak++
