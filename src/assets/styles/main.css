@@ -14,23 +14,6 @@
   /* Ensure full height on mobile */
   html, body, #app {
     height: 100%;
-    overflow: hidden;
-  }
-
-  /* Landing page override - enable scrolling */
-  html.landing-page,
-  body.landing-page,
-  html.landing-page #app {
-    height: auto;
-    overflow: auto;
-  }
-
-  /* Onboarding page override - enable scrolling */
-  html.onboarding-page,
-  body.onboarding-page,
-  html.onboarding-page #app {
-    height: auto;
-    overflow: auto;
   }
 
   /* Selection color */
