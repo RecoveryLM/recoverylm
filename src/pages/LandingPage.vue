@@ -30,10 +30,6 @@ const scrollToSection = (id: string) => {
 const observerRef = ref<IntersectionObserver | null>(null)
 
 onMounted(() => {
-  // Enable scrolling on this page (override global overflow:hidden)
-  document.documentElement.classList.add('landing-page')
-  document.body.classList.add('landing-page')
-
   observerRef.value = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -52,10 +48,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  // Restore global overflow:hidden
-  document.documentElement.classList.remove('landing-page')
-  document.body.classList.remove('landing-page')
-
   observerRef.value?.disconnect()
 })
 </script>
