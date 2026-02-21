@@ -408,6 +408,23 @@ export class AnthropicProvider implements InferenceProvider {
       contextSections.push(section)
     }
 
+    // Relevant history (memory)
+    if (context.relevantHistory.length > 0) {
+      const historyLines = context.relevantHistory.map(item => {
+        const tagInfo = item.tags && item.tags.length > 0
+          ? ` [${item.tags.join(', ')}]`
+          : ''
+        return `- [${item.date}, ${item.source}${tagInfo}] "${item.content}"`
+      })
+
+      contextSections.push(
+        '## Relevant History\n' +
+        'Past journal entries and conversations that may relate to what the user is discussing. ' +
+        'Reference naturally if appropriate \u2014 don\'t list them or force connections.\n\n' +
+        historyLines.join('\n')
+      )
+    }
+
     // Support network context
     if (context.supportNetwork) {
       const { tier1, tier2, primaryPartner, backupPartner } = context.supportNetwork
