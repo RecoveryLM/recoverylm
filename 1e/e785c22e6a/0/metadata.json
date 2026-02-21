@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "1ee785c22e6a",
+  "session_id": "5a7da3e1-2246-4289-825b-42c9230ebbf4",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T23:54:50.401365Z",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/services/inference/anthropic.ts",
+    "src/services/orchestrator.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "ea085c91c5f2",
+  "transcript_identifier_at_start": "740e2a9d-de17-4440-a1c0-231095e38ea8",
+  "token_usage": {
+    "input_tokens": 563,
+    "cache_creation_tokens": 244707,
+    "cache_read_tokens": 6715445,
+    "output_tokens": 2393,
+    "api_call_count": 67
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T23:54:49.820847Z",
+    "agent_lines": 0,
+    "human_added": 15,
+    "human_modified": 6,
+    "human_removed": 0,
+    "total_committed": 15,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-fieldbradley-Projects-recoverylm/5a7da3e1-2246-4289-825b-42c9230ebbf4.jsonl"
+}
