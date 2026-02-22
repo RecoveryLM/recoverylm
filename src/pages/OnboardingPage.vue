@@ -59,7 +59,7 @@ const complete = async () => {
       vulnerabilityPattern: collectedData.value.vulnerabilityPattern ?? 'both',
       commitmentStatement: collectedData.value.commitmentStatement ?? '',
       onboardingComplete: true,
-      sobrietyStartDate: today()
+      sobrietyStartDate: computeSobrietyStartDate()
     })
 
     // Save emergency contact if provided
@@ -132,9 +132,32 @@ const saveSubstance = () => {
   next()
 }
 
+const sobrietyDaysInput = ref('')
+const showSobrietyInput = ref(false)
+
 const saveStage = (value: RecoveryStage) => {
   collectedData.value.recoveryStage = value
+  // Show sobriety duration input after selecting stage (except 'considering')
+  if (value === 'considering') {
+    sobrietyDaysInput.value = '0'
+    showSobrietyInput.value = false
+    next()
+  } else {
+    showSobrietyInput.value = true
+  }
+}
+
+const confirmSobriety = () => {
+  showSobrietyInput.value = false
   next()
+}
+
+const computeSobrietyStartDate = (): string => {
+  const days = parseInt(sobrietyDaysInput.value, 10)
+  if (!days || days <= 0) return today()
+  const date = new Date()
+  date.setDate(date.getDate() - days)
+  return date.toISOString().split('T')[0]
 }
 
 const saveVulnerability = (value: VulnerabilityPattern) => {
@@ -256,19 +279,38 @@ const saveCommitment = () => {
 
           <!-- Stage -->
           <template v-else-if="currentStep === 'stage'">
-            <p class="mb-6">Where would you say you are in your recovery journey right now?</p>
-            <div class="space-y-3">
+            <template v-if="!showSobrietyInput">
+              <p class="mb-6">Where would you say you are in your recovery journey right now?</p>
+              <div class="space-y-3">
+                <button
+                  v-for="option in stageOptions"
+                  :key="option.value"
+                  @click="saveStage(option.value as RecoveryStage)"
+                  class="w-full text-left p-4 rounded-lg border transition-colors hover:border-indigo-500 hover:bg-indigo-500/10"
+                  :class="collectedData.recoveryStage === option.value ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-700/30'"
+                >
+                  <div class="font-medium text-white">{{ option.label }}</div>
+                  <div class="text-sm text-slate-400 mt-1">{{ option.description }}</div>
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <p class="mb-2">About how many days have you been sober?</p>
+              <p class="text-slate-400 text-sm mb-6">Your best estimate is fine. This helps Remi understand where you are.</p>
+              <input
+                v-model="sobrietyDaysInput"
+                type="number"
+                min="0"
+                placeholder="e.g. 70"
+                class="w-full p-3 rounded-lg border border-slate-700 bg-slate-700/30 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
               <button
-                v-for="option in stageOptions"
-                :key="option.value"
-                @click="saveStage(option.value as RecoveryStage)"
-                class="w-full text-left p-4 rounded-lg border transition-colors hover:border-indigo-500 hover:bg-indigo-500/10"
-                :class="collectedData.recoveryStage === option.value ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-slate-700/30'"
+                @click="confirmSobriety"
+                class="mt-4 w-full p-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition-colors"
               >
-                <div class="font-medium text-white">{{ option.label }}</div>
-                <div class="text-sm text-slate-400 mt-1">{{ option.description }}</div>
+                Continue
               </button>
-            </div>
+            </template>
           </template>
 
           <!-- Vulnerability Pattern -->

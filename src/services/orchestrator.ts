@@ -187,7 +187,7 @@ export async function buildGreetingContext(): Promise<ContextWindow> {
   const activityContext = formatActivityInsights(activityData)
 
   // Determine greeting type and build instruction
-  const isFirstTime = !recentSessionIds.length || temporalContext.daysSinceSignup === 0
+  const isFirstTime = !recentSessionIds.length && temporalContext.daysSinceSignup <= 0
   const displayName = profile?.displayName || 'friend'
   const hour = new Date().getHours()
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
