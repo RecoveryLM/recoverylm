@@ -3,7 +3,7 @@
   "checkpoint_id": "04b15e1ad949",
   "strategy": "manual-commit",
   "branch": "feat/12-remi-memory",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "src/services/orchestrator.ts"
   ],
@@ -14,13 +14,20 @@
       "context": "/04/b15e1ad949/0/context.md",
       "content_hash": "/04/b15e1ad949/0/content_hash.txt",
       "prompt": "/04/b15e1ad949/0/prompt.txt"
+    },
+    {
+      "metadata": "/04/b15e1ad949/1/metadata.json",
+      "transcript": "/04/b15e1ad949/1/full.jsonl",
+      "context": "/04/b15e1ad949/1/context.md",
+      "content_hash": "/04/b15e1ad949/1/content_hash.txt",
+      "prompt": "/04/b15e1ad949/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 618,
-    "cache_creation_tokens": 214001,
-    "cache_read_tokens": 11173399,
-    "output_tokens": 9031,
-    "api_call_count": 129
+    "input_tokens": 1359,
+    "cache_creation_tokens": 537819,
+    "cache_read_tokens": 23762458,
+    "output_tokens": 15296,
+    "api_call_count": 257
   }
 }
