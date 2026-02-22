@@ -3,7 +3,7 @@
   "checkpoint_id": "d9b20422029c",
   "strategy": "manual-commit",
   "branch": "feat/12-remi-memory",
-  "checkpoints_count": 2,
+  "checkpoints_count": 3,
   "files_touched": [
     "src/services/memoryExtraction.ts"
   ],
@@ -14,13 +14,20 @@
       "context": "/d9/b20422029c/0/context.md",
       "content_hash": "/d9/b20422029c/0/content_hash.txt",
       "prompt": "/d9/b20422029c/0/prompt.txt"
+    },
+    {
+      "metadata": "/d9/b20422029c/1/metadata.json",
+      "transcript": "/d9/b20422029c/1/full.jsonl",
+      "context": "/d9/b20422029c/1/context.md",
+      "content_hash": "/d9/b20422029c/1/content_hash.txt",
+      "prompt": "/d9/b20422029c/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 565,
-    "cache_creation_tokens": 209151,
-    "cache_read_tokens": 10088531,
-    "output_tokens": 8811,
-    "api_call_count": 121
+    "input_tokens": 1306,
+    "cache_creation_tokens": 532969,
+    "cache_read_tokens": 22677590,
+    "output_tokens": 15076,
+    "api_call_count": 249
   }
 }
