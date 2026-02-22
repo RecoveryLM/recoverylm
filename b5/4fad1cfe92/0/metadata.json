@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "b54fad1cfe92",
+  "session_id": "511b3624-7516-448c-8773-fc8ea101bed2",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-22T11:40:09.313727Z",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/services/memoryExtraction.ts",
+    "src/services/vault.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "dc2d0ebb6cfb",
+  "transcript_identifier_at_start": "a87aa0b8-f7f7-4c95-953e-67e4677f2f23",
+  "token_usage": {
+    "input_tokens": 462,
+    "cache_creation_tokens": 183951,
+    "cache_read_tokens": 5222670,
+    "output_tokens": 6061,
+    "api_call_count": 81
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-22T11:40:08.685093Z",
+    "agent_lines": 0,
+    "human_added": 36,
+    "human_modified": 7,
+    "human_removed": 0,
+    "total_committed": 36,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-fieldbradley-Projects-recoverylm/511b3624-7516-448c-8773-fc8ea101bed2.jsonl"
+}
