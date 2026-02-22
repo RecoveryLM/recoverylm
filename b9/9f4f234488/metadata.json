@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "b99f4f234488",
+  "strategy": "manual-commit",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/services/inference/anthropic.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/b9/9f4f234488/0/metadata.json",
+      "transcript": "/b9/9f4f234488/0/full.jsonl",
+      "context": "/b9/9f4f234488/0/context.md",
+      "content_hash": "/b9/9f4f234488/0/content_hash.txt",
+      "prompt": "/b9/9f4f234488/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 458,
+    "cache_creation_tokens": 176143,
+    "cache_read_tokens": 4810189,
+    "output_tokens": 4984,
+    "api_call_count": 77
+  }
+}
