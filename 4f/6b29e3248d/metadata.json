@@ -3,7 +3,7 @@
   "checkpoint_id": "4f6b29e3248d",
   "strategy": "manual-commit",
   "branch": "feat/12-remi-memory",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "src/services/vault.ts"
   ],
@@ -14,13 +14,20 @@
       "context": "/4f/6b29e3248d/0/context.md",
       "content_hash": "/4f/6b29e3248d/0/content_hash.txt",
       "prompt": "/4f/6b29e3248d/0/prompt.txt"
+    },
+    {
+      "metadata": "/4f/6b29e3248d/1/metadata.json",
+      "transcript": "/4f/6b29e3248d/1/full.jsonl",
+      "context": "/4f/6b29e3248d/1/context.md",
+      "content_hash": "/4f/6b29e3248d/1/content_hash.txt",
+      "prompt": "/4f/6b29e3248d/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 452,
-    "cache_creation_tokens": 171301,
-    "cache_read_tokens": 4224409,
-    "output_tokens": 4787,
-    "api_call_count": 71
+    "input_tokens": 1193,
+    "cache_creation_tokens": 495119,
+    "cache_read_tokens": 16813468,
+    "output_tokens": 11052,
+    "api_call_count": 199
   }
 }
