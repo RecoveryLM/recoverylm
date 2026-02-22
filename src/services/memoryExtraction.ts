@@ -276,10 +276,23 @@ export async function runMemoryExtractionIfNeeded(): Promise<void> {
     }
 
     // Determine the start of the window to cover
-    const coveringFrom = latest ? latest.coveringTo : todayStr
+    let coveringFrom: string
+    if (latest) {
+      coveringFrom = latest.coveringTo
+    } else {
+      // First extraction ever — look back from the user's account creation date
+      const profile = await vault.getProfile()
+      if (profile?.createdAt) {
+        const created = new Date(profile.createdAt)
+        coveringFrom = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}-${String(created.getDate()).padStart(2, '0')}`
+      } else {
+        // No profile or createdAt — nothing to extract
+        return
+      }
+    }
 
-    // First day with no prior memory — nothing to extract yet
-    if (coveringFrom === todayStr) {
+    // Nothing to extract if covering period starts today
+    if (coveringFrom >= todayStr) {
       return
     }
 
