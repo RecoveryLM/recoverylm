@@ -383,6 +383,15 @@ export class AnthropicProvider implements InferenceProvider {
         lines.push(`Craving intensity: ${avgCravings.toFixed(1)}/10 avg${recentCraving !== undefined ? ` (most recent: ${recentCraving})` : ''}`)
       }
 
+      // Include daily notes
+      const withNotes = metrics.filter(m => m.notes)
+      if (withNotes.length > 0) {
+        lines.push('Daily notes:')
+        for (const m of withNotes) {
+          lines.push(`- ${m.date}: ${m.notes}`)
+        }
+      }
+
       contextSections.push(lines.join('\n'))
     }
 
@@ -423,6 +432,48 @@ export class AnthropicProvider implements InferenceProvider {
         'Reference naturally if appropriate \u2014 don\'t list them or force connections.\n\n' +
         historyLines.join('\n')
       )
+    }
+
+    // Daily memories and user facts
+    if (context.dailyMemories && context.dailyMemories.length > 0) {
+      const memoryLines: string[] = ['## What You Know About This User']
+
+      // User facts (from most recent memory)
+      const latestMemory = context.dailyMemories[0]
+      if (latestMemory.userFacts.length > 0) {
+        memoryLines.push('### Key Facts')
+        memoryLines.push(...latestMemory.userFacts.map(f => `- ${f}`))
+      }
+
+      // Follow-ups
+      if (latestMemory.followUps.length > 0) {
+        memoryLines.push('### Follow-ups')
+        memoryLines.push(...latestMemory.followUps.map(f => `- ${f}`))
+      }
+
+      // Recent daily summaries (last 3 days with content)
+      const recentSummaries = context.dailyMemories
+        .filter(m => m.conversationSummary || m.journalSummary || m.checkinSummary)
+        .slice(0, 3)
+
+      if (recentSummaries.length > 0) {
+        memoryLines.push('### Recent Activity Summaries')
+        for (const mem of recentSummaries) {
+          memoryLines.push(`**${mem.coveringFrom} to ${mem.coveringTo}:**`)
+          if (mem.conversationSummary) memoryLines.push(`- Chat: ${mem.conversationSummary}`)
+          if (mem.journalSummary) memoryLines.push(`- Journal: ${mem.journalSummary}`)
+          if (mem.checkinSummary) memoryLines.push(`- Check-in: ${mem.checkinSummary}`)
+          if (mem.emotionalState) memoryLines.push(`- Emotional state: ${mem.emotionalState}`)
+        }
+      }
+
+      // Notable patterns
+      if (latestMemory.notablePatterns.length > 0) {
+        memoryLines.push('### Patterns')
+        memoryLines.push(...latestMemory.notablePatterns.map(p => `- ${p}`))
+      }
+
+      contextSections.push(memoryLines.join('\n'))
     }
 
     // Support network context
