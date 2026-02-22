@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "d9b20422029c",
+  "strategy": "manual-commit",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "src/services/memoryExtraction.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d9/b20422029c/0/metadata.json",
+      "transcript": "/d9/b20422029c/0/full.jsonl",
+      "context": "/d9/b20422029c/0/context.md",
+      "content_hash": "/d9/b20422029c/0/content_hash.txt",
+      "prompt": "/d9/b20422029c/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 565,
+    "cache_creation_tokens": 209151,
+    "cache_read_tokens": 10088531,
+    "output_tokens": 8811,
+    "api_call_count": 121
+  }
+}
