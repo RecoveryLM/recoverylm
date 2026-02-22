@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "c7a439bc5cb0",
+  "strategy": "manual-commit",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/pages/OnboardingPage.vue",
+    "src/services/orchestrator.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/c7/a439bc5cb0/0/metadata.json",
+      "transcript": "/c7/a439bc5cb0/0/full.jsonl",
+      "context": "/c7/a439bc5cb0/0/context.md",
+      "content_hash": "/c7/a439bc5cb0/0/content_hash.txt",
+      "prompt": "/c7/a439bc5cb0/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 65,
+    "cache_creation_tokens": 51805,
+    "cache_read_tokens": 919929,
+    "output_tokens": 1901,
+    "api_call_count": 22
+  }
+}
