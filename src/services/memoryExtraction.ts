@@ -218,10 +218,11 @@ async function extractDailyMemory(coveringFrom: string): Promise<DailyMemory> {
     .map(block => (block.type === 'text' ? block.text : ''))
     .join('')
 
-  // Parse JSON response
+  // Parse JSON response — strip markdown code fences if present
+  const jsonText = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
   let result: ExtractionResult
   try {
-    result = JSON.parse(text) as ExtractionResult
+    result = JSON.parse(jsonText) as ExtractionResult
     if (!Array.isArray(result.userFacts)) result.userFacts = []
     if (!Array.isArray(result.followUps)) result.followUps = []
     if (!Array.isArray(result.notablePatterns)) result.notablePatterns = []
