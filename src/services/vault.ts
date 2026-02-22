@@ -19,7 +19,8 @@ import type {
   AppSettings,
   ActivityLog,
   WidgetId,
-  DailyPracticeConfig
+  DailyPracticeConfig,
+  DailyMemory
 } from '@/types'
 import { DEFAULT_METRICS, DEFAULT_DAILY_PRACTICE_ITEMS } from '@/types'
 import {
@@ -662,6 +663,67 @@ export async function getTodayActivityLogs(): Promise<ActivityLog[]> {
   }
 
   return logs
+}
+
+// ============================================
+// Daily Memories
+// ============================================
+
+export async function getDailyMemories(options: {
+  after?: string
+  limit?: number
+} = {}): Promise<DailyMemory[]> {
+  const { key } = requireUnlocked()
+  const db = getDatabase()
+
+  let query = db.dailyMemories.orderBy('date').reverse()
+
+  if (options.after) {
+    query = query.filter(m => m.date >= options.after!)
+  }
+  if (options.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const entries = await query.toArray()
+  const memories: DailyMemory[] = []
+
+  for (const entry of entries) {
+    const memory = await decryptObject<DailyMemory>(entry.data, key)
+    memories.push(memory)
+  }
+
+  return memories
+}
+
+export async function getLatestDailyMemory(): Promise<DailyMemory | null> {
+  const { key } = requireUnlocked()
+  const db = getDatabase()
+
+  const entry = await db.dailyMemories.orderBy('date').reverse().first()
+  if (!entry) return null
+
+  return decryptObject<DailyMemory>(entry.data, key)
+}
+
+export async function saveDailyMemory(memory: DailyMemory): Promise<void> {
+  const { key, salt } = requireUnlocked()
+  const db = getDatabase()
+
+  const encrypted = await encryptObject(memory, key, salt)
+  await db.dailyMemories.put({
+    id: memory.id,
+    date: memory.date,
+    coveringTo: memory.coveringTo,
+    data: encrypted,
+    createdAt: memory.createdAt
+  })
+}
+
+export async function getAllUserFacts(): Promise<string[]> {
+  const memories = await getDailyMemories({ limit: 30 })
+  if (memories.length === 0) return []
+  return memories[0].userFacts
 }
 
 // ============================================
