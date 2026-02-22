@@ -137,12 +137,24 @@ function buildExtractionPrompt(activity: RawActivity): string {
   // Daily check-ins (metrics)
   if (activity.metrics.length > 0) {
     const metricLines = activity.metrics.map(m => {
-      const parts = [`Date: ${m.date}`, `Mood: ${m.moodScore}/10`, `Sober: ${m.sobrietyMaintained}`]
+      // Detect if this is a full check-in vs just habit toggles with default mood
+      const hasDetailedData = m.sleepQuality !== undefined || m.anxietyLevel !== undefined ||
+        m.cravingIntensity !== undefined || m.notes
+      const parts = [`Date: ${m.date}`]
+      // Only include mood if the user likely set it explicitly (not the default 5)
+      if (m.moodScore !== 5 || hasDetailedData) {
+        parts.push(`Mood: ${m.moodScore}/10`)
+      }
+      parts.push(`Sober: ${m.sobrietyMaintained}`)
       if (m.sleepQuality !== undefined) parts.push(`Sleep: ${m.sleepQuality}/10`)
       if (m.anxietyLevel !== undefined) parts.push(`Anxiety: ${m.anxietyLevel}/10`)
       if (m.cravingIntensity !== undefined) parts.push(`Cravings: ${m.cravingIntensity}/10`)
-      if (m.exercise) parts.push('Exercised')
-      if (m.meditation) parts.push('Meditated')
+      const habits = [
+        m.exercise && 'exercise', m.meditation && 'meditation',
+        m.study && 'study', m.healthyEating && 'healthy eating',
+        m.connectionTime && 'social connection', m.cbtPractice && 'CBT practice'
+      ].filter(Boolean)
+      if (habits.length > 0) parts.push(`Habits: ${habits.join(', ')}`)
       if (m.notes) parts.push(`Notes: ${m.notes}`)
       return parts.join(' | ')
     })
