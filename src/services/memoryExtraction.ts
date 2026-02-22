@@ -203,12 +203,15 @@ async function extractDailyMemory(coveringFrom: string): Promise<DailyMemory> {
   const prompt = buildExtractionPrompt(activity)
   const anthropic = getClient()
 
-  const response = await anthropic.messages.create({
+  // Use streaming API — the proxy only supports streaming responses
+  const stream = anthropic.messages.stream({
     model: MODEL,
     max_tokens: 1024,
     system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }]
   })
+
+  const response = await stream.finalMessage()
 
   const text = response.content
     .filter(block => block.type === 'text')
