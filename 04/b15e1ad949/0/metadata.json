@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "04b15e1ad949",
+  "session_id": "511b3624-7516-448c-8773-fc8ea101bed2",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-22T12:00:15.827032Z",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/services/orchestrator.ts"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "f10c75d76da3",
+  "transcript_identifier_at_start": "a87aa0b8-f7f7-4c95-953e-67e4677f2f23",
+  "token_usage": {
+    "input_tokens": 618,
+    "cache_creation_tokens": 214001,
+    "cache_read_tokens": 11173399,
+    "output_tokens": 9031,
+    "api_call_count": 129
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-22T12:00:15.123343Z",
+    "agent_lines": 0,
+    "human_added": 6,
+    "human_modified": 3,
+    "human_removed": 0,
+    "total_committed": 6,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-fieldbradley-Projects-recoverylm/511b3624-7516-448c-8773-fc8ea101bed2.jsonl"
+}
