@@ -12,6 +12,7 @@ import type {
 import { DEFAULT_DAILY_PRACTICE_ITEMS } from '@/types'
 import type { BackupData } from '@/services/vault'
 import * as vault from '@/services/vault'
+import { runMemoryExtractionIfNeeded } from '@/services/memoryExtraction'
 
 // ============================================
 // Reactive State
@@ -79,6 +80,8 @@ export function useVault() {
         isUnlocked.value = true
         // Load user profile
         userProfile.value = await vault.getProfile()
+        // Async memory extraction (non-blocking)
+        runMemoryExtractionIfNeeded()
       } else {
         error.value = 'Incorrect password'
       }
