@@ -327,12 +327,7 @@ export class AnthropicProvider implements InferenceProvider {
     // Temporal context
     if (context.temporalContext) {
       const { localTime, daysSober, daysSinceSignup, currentStreak } = context.temporalContext
-      // If memory facts mention sobriety, prefer that over the computed value
-      const sobrietyFact = context.dailyMemories?.[0]?.userFacts.find(f => /sober|sobriety|clean/i.test(f))
-      const sobrietyLine = sobrietyFact
-        ? `Sobriety (per user): ${sobrietyFact}`
-        : `Days sober: ${daysSober}`
-      let contextLines = `## Current Context\n- Local time: ${localTime}\n- ${sobrietyLine}\n- Current streak: ${currentStreak.days} days\n- Days since signup: ${daysSinceSignup}`
+      let contextLines = `## Current Context\n- Local time: ${localTime}\n- Days sober: ${daysSober}\n- Current streak: ${currentStreak.days} days\n- Days since signup: ${daysSinceSignup}`
       if (daysSinceSignup <= 7) {
         contextLines += `\n\nNote: This user is new (${daysSinceSignup === 0 ? 'just signed up today' : `only ${daysSinceSignup} day${daysSinceSignup === 1 ? '' : 's'} ago`}). Be welcoming and patient - they're still learning how to use the app and establishing their routine. Don't shame them for missing check-ins or not having habits established yet.`
       }
