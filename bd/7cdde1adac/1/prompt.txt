@@ -1,0 +1,2093 @@
+I want you to take the role of a product manager and review our project as it stands now using the README, while you dispatch agents to review the code. Your missin is to tell me the state of the app, it's viability as an open source project which might be useful to companies, and what features we need to add to make this something special, if that is even possible.
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+<task-notification>
+<task-id>ab4f7cb1c16bfcf0c</task-id>
+<tool-use-id>toolu_01YLETpqRiRGxeHZeK3EKeGg</tool-use-id>
+<status>completed</status>
+<summary>Agent "Review test coverage and CI" completed</summary>
+<result>Now I have a comprehensive picture of the project. Let me compile the full assessment.
+
+---
+
+## RecoveryLM: Open-Source Readiness Assessment
+
+### 1. Testing Frameworks Configured
+
+**There are zero testing frameworks installed or configured in this project.**
+
+`package.json` contains only 8 devDependencies, none of which are testing tools:
+
+```json
+// /Users/fieldbradley/Projects/recoverylm/package.json (devDependencies)
+"devDependencies": {
+  "@tailwindcss/typography": "^0.5.19",
+  "@types/node": "^22.10.7",
+  "@vitejs/plugin-vue": "^5.2.1",
+  "autoprefixer": "^10.4.20",
+  "postcss": "^8.4.49",
+  "tailwindcss": "^3.4.17",
+  "typescript": "~5.6.3",
+  "vite": "^6.0.7",
+  "vite-plugin-pwa": "^0.21.1",
+  "vue-tsc": "^2.2.0"
+}
+```
+
+No `vitest`, `jest`, `cypress`, `playwright`, `@vue/test-utils`, `@testing-library/vue`, or any test runner is present. The same is true for `/Users/fieldbradley/Projects/recoverylm/server/package.json`.
+
+There is no `vitest.config.*`, `jest.config.*`, `cypress.config.*`, or `playwright.config.*` file anywhere in the project root.
+
+### 2. Test Files That Exist
+
+**Zero test files exist in the project source.** The `*.test.*` and `*.spec.*` files found during the search belong exclusively to node_modules (dependencies like `zod`, `fast-uri`, etc.) - none are authored by the project.
+
+The entire `/Users/fieldbradley/Projects/recoverylm/src/` tree (80+ files) has no corresponding test files.
+
+### 3. Ratio of Tested vs Untested Code
+
+**0% of project code is tested.** The breakdown of untested source files is:
+
+| Category | Files |
+|---|---|
+| Pages (Vue) | 12 files (`ChatPage.vue`, `DashboardPage.vue`, `OnboardingPage.vue`, etc.) |
+| Services | ~12 files (`vault.ts`, `crypto.ts`, `orchestrator.ts`, `crisisHandler.ts`, `widgetParser.ts`, etc.) |
+| Composables | ~8 files (`useChat.ts`, `useCrisis.ts`, `useVault.ts`, `useAutoLock.ts`, etc.) |
+| Agent system | ~8 files (`runner.ts`, `session.ts`, `tools/*.ts`, etc.) |
+| Widgets (Vue) | ~12 components (`DentsWidget.vue`, `TapeWidget.vue`, etc.) |
+| Other components | ~12 files |
+| Server | `server/src/index.ts` |
+
+The most critically undertested areas from a correctness and safety standpoint are:
+
+- `/Users/fieldbradley/Projects/recoverylm/src/services/crypto.ts` - AES-GCM-256 encryption and PBKDF2 key derivation, which is the foundation of the entire privacy model
+- `/Users/fieldbradley/Projects/recoverylm/src/services/crisisHandler.ts` and `/Users/fieldbradley/Projects/recoverylm/src/composables/useCrisis.ts` - Pattern matching for suicide/self-harm detection; a false negative here has direct user safety implications
+- `/Users/fieldbradley/Projects/recoverylm/src/services/widgetParser.ts` - Parsing `[WIDGET:W_NAME|{json_params}]` commands from AI responses
+- `/Users/fieldbradley/Projects/recoverylm/src/services/vault.ts` - IndexedDB persistence with encryption
+- `/Users/fieldbradley/Projects/recoverylm/src/agent/runner.ts` - The agentic tool use loop
+
+### 4. CI/CD Configuration
+
+**No GitHub Actions workflows exist.** The only `.github/` file is:
+
+```
+/Users/fieldbradley/Projects/recoverylm/.github/CODEOWNERS
+```
+
+Contents:
+```
+* @jeffgbradley2
+```
+
+This is a minimal CODEOWNERS file that assigns all files to a single owner - it exists but does not imply any automated CI is wired to it. There are no `.github/workflows/` files, no `Dockerfile`, no `docker-compose.yml`, and no deployment configuration in the repository root. The `server/` directory targets Google Cloud Run (noted in comments at `server/src/index.ts` line 8), but there is no infrastructure-as-code or deployment pipeline checked in.
+
+### 5. Linting and Formatting
+
+**No linting or formatting tools are configured.** There is no:
+- ESLint config (`.eslintrc.*`, `eslint.config.*`)
+- Prettier config (`.prettierrc.*`, `prettier.config.*`)
+- Stylelint config
+- EditorConfig (`.editorconfig`)
+
+The only code quality gate is TypeScript's strict mode via `tsconfig.json`:
+
+```json
+// /Users/fieldbradley/Projects/recoverylm/tsconfig.json
+"strict": true,
+"noUnusedLocals": true,
+"noUnusedParameters": true,
+"noFallthroughCasesInSwitch": true,
+"noUncheckedSideEffectImports": true
+```
+
+This is a meaningful quality layer - TypeScript strict mode catches real bugs - but it does not enforce code style, import ordering, or Vue-specific best practices.
+
+### 6. Package.json Scripts Summary
+
+```json
+// /Users/fieldbradley/Projects/recoverylm/package.json
+"scripts": {
+  "dev": "vite",
+  "build": "vue-tsc -b && vite build",
+  "preview": "vite preview",
+  "typecheck": "vue-tsc --noEmit"
+}
+```
+
+Only 4 scripts are defined. There is no `test`, `lint`, `format`, `coverage`, or `ci` script. The `CLAUDE.md` mentions `npm run typecheck` should be run before commits, but this is not enforced by a pre-commit hook (no `.husky/`, `.lefthook.yml`, or `lint-staged` config exists).
+
+Server package (`/Users/fieldbradley/Projects/recoverylm/server/package.json`) adds `dev`, `build`, `start`, and `typecheck` for the Express proxy.
+
+### 7. Contributing Guide and Open-Source Setup
+
+| Artifact | Status |
+|---|---|
+| LICENSE | Not present |
+| README.md | Not present |
+| CONTRIBUTING.md | Not present |
+| CODE_OF_CONDUCT.md | Not present |
+| CHANGELOG.md | Not present |
+| SECURITY.md | Not present |
+| CODEOWNERS | Present (single owner: `@jeffgbradley2`) |
+| Issue templates | Not present |
+| PR templates | Not present |
+
+The `package.json` has `"private": true`, which signals this is not intended for npm publication, but there is no open-source license, so the default copyright is "all rights reserved" to the author.
+
+### 8. Documentation Beyond CLAUDE.md
+
+The documentation inventory is:
+
+| File | Content |
+|---|---|
+| `/Users/fieldbradley/Projects/recoverylm/CLAUDE.md` | Developer guide for Claude Code agents: architecture, build commands, data flow diagram, widget system, crisis levels, routing |
+| `/Users/fieldbradley/Projects/recoverylm/docs/independent-recovery-framework.md` | A detailed user-facing recovery framework document (500+ lines) covering DENTS, SMART Recovery, accountability networks, CBT, Stoic practice, etc. |
+
+There is no README.md, no API documentation, no architecture diagrams (beyond the ASCII art in CLAUDE.md), and no user documentation site.
+
+---
+
+## Open-Source Readiness Score: 2/10
+
+### Strengths
+
+- The codebase has strong TypeScript discipline: strict mode, `noUnusedLocals`, `noUnusedParameters` are all enforced.
+- `CLAUDE.md` provides a genuinely useful architecture overview that serves as an informal developer guide.
+- The project has a clear separation of concerns across layers (composables, services, inference, widgets) that would make it testable if tests were written.
+- The domain documentation (`docs/independent-recovery-framework.md`) is high quality and shows intellectual investment in the subject matter.
+- CODEOWNERS is in place, showing some awareness of code review requirements.
+
+### Critical Gaps for Open-Source Readiness
+
+**Testing (Highest Priority).**
+The crisis detection system (`useCrisis.ts`, `crisisHandler.ts`) handles EMERGENCY/URGENT classification for suicidal ideation patterns. The crypto layer (`crypto.ts`) protects all user data. Both are completely untested. For a health application, this is a significant risk. Vitest would integrate naturally with the existing Vite setup and requires minimal configuration.
+
+**No CI/CD pipeline.** Any PR to the repository can be merged without any automated build, typecheck, or test gate. A single GitHub Actions workflow running `npm run typecheck` would be an immediate improvement.
+
+**No LICENSE.** Without an explicit license, the repository cannot be legally forked or contributed to under open-source norms. This is the single most important missing artifact for open-source readiness.
+
+**No README.md.** There is no entry point for new contributors or users. The CLAUDE.md fills some of this gap for AI agents but is not a substitute.
+
+**No linting.** With multiple contributors, consistent code style becomes important. Vue projects benefit from `eslint-plugin-vue` for component-specific rules, and `@typescript-eslint` for TS-specific patterns that the compiler does not catch.
+
+**No pre-commit hooks.** Even `npm run typecheck` is voluntary per `CLAUDE.md` with no automated enforcement.
+
+### Essential Files for Understanding the Codebase
+
+For anyone trying to understand or contribute to RecoveryLM, these are the essential files:
+
+- `/Users/fieldbradley/Projects/recoverylm/CLAUDE.md` - Architecture overview and constraints
+- `/Users/fieldbradley/Projects/recoverylm/package.json` - Dependency and script baseline
+- `/Users/fieldbradley/Projects/recoverylm/tsconfig.json` - TypeScript configuration
+- `/Users/fieldbradley/Projects/recoverylm/vite.config.ts` - Build configuration and PWA manifest
+- `/Users/fieldbradley/Projects/recoverylm/src/types/index.ts` - All data models
+- `/Users/fieldbradley/Projects/recoverylm/src/services/crypto.ts` - Encryption foundation
+- `/Users/fieldbradley/Projects/recoverylm/src/services/vault.ts` - Data persistence layer
+- `/Users/fieldbradley/Projects/recoverylm/src/composables/useCrisis.ts` - Crisis detection
+- `/Users/fieldbradley/Projects/recoverylm/src/composables/useChat.ts` - Core chat flow
+- `/Users/fieldbradley/Projects/recoverylm/src/services/orchestrator.ts` - Context window assembly
+- `/Users/fieldbradley/Projects/recoverylm/src/services/widgetParser.ts` - Widget command parsing
+- `/Users/fieldbradley/Projects/recoverylm/server/src/index.ts` - API proxy server
+- `/Users/fieldbradley/Projects/recoverylm/.github/CODEOWNERS` - Ownership configuration
+- `/Users/fieldbradley/Projects/recoverylm/docs/independent-recovery-framework.md` - Domain context</result>
+<usage><total_tokens>48946</total_tokens><tool_uses>28</tool_uses><duration_ms>87650</duration_ms></usage>
+</task-notification>
+Full transcript available at: REDACTED.output
+
+---
+
+[Request interrupted by user]
+
+---
+
+<task-notification>
+<task-id>a51a59a8d7e93af9f</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<status>completed</status>
+<summary>Agent "Map component and UI completeness" completed</summary>
+<result>Excellent! I now have a comprehensive understanding of the UI layer. Let me create a detailed summary report.
+
+## Comprehensive UI Layer Exploration Report - RecoveryLM
+
+### 1. VUE COMPONENTS INVENTORY
+
+#### **Pages (13 Total)**
+Located in `/src/pages/`:
+
+1. **LandingPage.vue** (356 lines)
+   - Marketing landing page with hero section
+   - Features showcase with cards
+   - Framework explanation with framework pillars
+   - Privacy architecture section
+   - Crisis resources disclaimer
+   - Scroll-based reveal animations
+   - CTA buttons for sign-up/launch
+
+2. **DashboardPage.vue** (710 lines) - COMPREHENSIVE DASHBOARD
+   - System Status Indicator (HUD) with visual status dots (nominal/drift/critical)
+   - Metric Cards showing streaks (Sobriety, Exercise, Meditation, Mood)
+   - Trend indicators (trending up/down/stable)
+   - Leading Indicators detection with risk analysis
+   - Focus Card for "Next Right Thing" with time-aware task scheduling
+   - Pillar Health tracking (Program Status, Network Accountability)
+   - Quick Capture input for journal entries
+   - Contact quick-links to support network
+
+3. **ChatPage.vue** (200+ lines)
+   - Real-time chat interface with AI companion Remi
+   - Message history with auto-scroll
+   - Markdown rendering for responses
+   - Widget embedding and rendering system
+   - Typing indicators and thinking states
+   - Crisis modal integration
+   - Quick capture support
+   - Widget completion handling
+
+4. **ActivitiesPage.vue** (650+ lines) - ACTIVITY HUB
+   - Date navigation with calendar picker
+   - Daily activity checklist/widget selector
+   - Crisis Quick Access component
+   - Multiple widget implementations inline
+   - Historical metrics tracking
+   - Streak calculations
+   - Custom metric handling
+
+5. **MetricsPage.vue** (450+ lines)
+   - Date range selector (week/month/year)
+   - Heatmap visualizations for boolean metrics
+   - Trend analysis displays
+   - Scale metric visualizations (sleep, anxiety, cravings)
+   - Historical metrics view
+   - Day detail modal integration
+
+6. **JournalPage.vue** (300+ lines)
+   - Multiple journal templates (Morning Stoic, Evening Review, CBT Analysis, Freeform)
+   - Two-tab interface (write/history)
+   - Template-based prompts
+   - Tag system for journal entries
+   - Character count tracking
+   - Markdown editor
+   - Send to Chat integration
+
+7. **OnboardingPage.vue** (400+ lines) - MULTI-STEP WIZARD
+   - 10-step onboarding flow (welcome → complete)
+   - User profile setup
+   - Recovery philosophy selection
+   - Substance focus declaration
+   - Recovery stage assessment
+   - Vulnerability pattern identification
+   - Emergency contact configuration
+   - Commitment statement creation
+   - Progress bar display
+
+8. **SettingsPage.vue** (450+ lines)
+   - Metric configuration section
+   - Daily practice settings
+   - Password management
+   - Recovery phrase management
+   - Backup/import functionality
+   - Auto-lock timer configuration
+   - Data export/wipe controls
+   - Danger zone with confirmation
+
+9. **NetworkPage.vue** (450+ lines)
+   - Support network management
+   - Two-tier contact system
+   - Emergency contact display
+   - Contact method options (phone/text/email)
+   - Authority permission grants
+   - Add/edit/delete contacts
+   - Call/text quick actions
+
+10. **UnlockPage.vue** (208 lines)
+    - Dual-mode landing (new user vs returning user)
+    - Login form with password visibility toggle
+    - Create account flow
+    - Recovery phrase option
+    - Error handling
+    - Auto-redirect for unlocked state
+
+11. **SetupPage.vue** (200+ lines)
+    - Password creation with strength meter
+    - Password confirmation
+    - Strength validation feedback
+    - Account creation flow
+
+12. **RecoveryPhraseSetupPage.vue** (300+ lines)
+    - Recovery phrase display and generation
+    - Copy to clipboard functionality
+    - Phrase verification
+    - Backup workflow
+
+13. **RecoveryPage.vue** (200+ lines)
+    - Password recovery via recovery phrase
+    - 12-word phrase validation
+    - New password creation and confirmation
+    - Back navigation
+
+---
+
+### 2. COMPONENT STRUCTURE (28 Components Total)
+
+#### **Navigation Components** (6 components)
+- **DesktopSidebar.vue** - 76 lines
+  - Logo header
+  - Primary nav: Dashboard, Chat, Activities, Metrics, Journal, Support
+  - Settings button in footer
+  - Active state highlighting with borders
+
+- **MobileBottomNav.vue** - 37 lines
+  - Bottom-fixed navigation for mobile
+  - Icon-only design with safe-area inset
+  - 6-item navigation with active color (indigo)
+
+- **MobileHeader.vue** - 65 lines
+  - Logo with toggle menu button
+  - Mobile menu overlay with transitions
+  - Dynamic navigation based on route
+
+- **TopBar.vue** - 33 lines
+  - Page title display (desktop only)
+  - SOS/Emergency button (always visible)
+  - Border and background styling
+
+#### **Widget System** (11 interactive widgets)
+All widgets follow completionState restoration pattern:
+
+1. **CheckinWidget.vue** (360 lines) - DAILY METRICS CHECK-IN
+   - Boolean metrics toggle (exercise, meditation, study, etc.)
+   - Scale metrics (sleep quality, anxiety, craving intensity)
+   - Mood slider (1-10)
+   - Notes field
+   - Auto-save functionality
+   - Completion state restoration
+
+2. **DentsWidget.vue** (239 lines) - URGE MANAGEMENT (D.E.N.T.S Protocol)
+   - 5-step protocol with checkboxes
+   - 10-minute countdown timer
+   - Pause/play controls
+   - Progress tracking
+   - Step descriptions and guidance
+
+3. **TapeWidget.vue** (222 lines) - CONSEQUENCE EXPLORATION
+   - Thought input field
+   - Consequence list (short-term/long-term)
+   - Add/remove consequence functionality
+   - Visual consequence cards
+   - Summary display
+
+4. **StoicWidget.vue** (246 lines) - DICHOTOMY OF CONTROL
+   - Situation/thought input
+   - Controllable vs uncontrollable lists
+   - Action planning section
+   - Acceptance affirmation
+   - Visual framing with stoic terminology
+
+5. **EvidenceWidget.vue** (278 lines) - CBT EVIDENCE EXAMINATION
+   - Thought analysis
+   - Evidence for/against lists
+   - Balanced thought synthesis
+   - Interactive list management
+   - Summary view with completion state
+
+6. **UrgeSurfWidget.vue** (481 lines) - GUIDED URGE MEDITATION
+   - Multi-phase meditation (Notice, Breathe, Observe, Accept)
+   - Customizable duration (default 5 min)
+   - Audio cues with voice support
+   - Wave animation visualization
+   - Phase-based progress tracking
+   - Play/pause/restart controls
+
+7. **CommitmentWidget.vue** (182 lines)
+   - View/edit modes
+   - Commitment statement display
+   - Text editor with character count
+   - Save functionality
+   - Saved confirmation animation
+
+8. **NetworkWidget.vue** (234 lines)
+   - Support network visualization
+   - Contact tier display (1/2)
+   - Call/text/email actions
+   - Primary partner indicator
+   - Authority permission display
+
+9. **ThoughtLogWidget.vue** (458 lines)
+   - Free-form thought entry
+   - Tag system (urge, emotion, victory, etc.)
+   - Timestamp tracking
+   - Previous entries view
+   - Thought history with filtering
+
+10. **GratitudeWidget.vue** (186 lines)
+    - Three gratitude entry fields
+    - Simple form submission
+    - Encouragement copy
+
+11. **SelfAppreciationWidget.vue** (304 lines)
+    - Self-affirmation collection
+    - Customizable affirmations
+    - Visual cards for each affirmation
+    - Editing capability
+
+#### **Crisis & Emergency** (2 components)
+- **CrisisModal.vue** (131 lines)
+  - Modal overlay with alertdialog role
+  - Crisis resource buttons (988, Crisis Text, SAMHSA)
+  - Emergency contact quick-dial
+  - Acknowledgment checkbox requirement
+  - Call functionality with tel: links
+  - ARIA labels for accessibility
+
+- **SosButton.vue** (23 lines)
+  - Red emergency button with shield icon
+  - Text responsive (shows full label on desktop, "SOS" on mobile)
+  - Accessibility label
+  - Trigger crisis protocol
+
+#### **Settings & Configuration** (3 components)
+- **MetricSettingsSection.vue** (301 lines)
+  - Enable/disable metric toggles
+  - Custom metric creation
+  - Edit/delete functionality
+  - Default metric handling
+
+- **DailyPracticeSettingsSection.vue** (194 lines)
+  - Practice item list management
+  - Time window configuration
+  - Item ordering/priority
+  - Enable/disable toggles
+  - Widget/journal selection
+
+- **DailyPracticeSettingsSection.vue** - Manages daily practice configuration
+
+#### **Modals & Dialogs** (5 components)
+- **DayDetailModal.vue** (179 lines)
+  - Modal with backdrop
+  - Date formatting
+  - Metric display for selected day
+  - Boolean metric status with icons
+  - Scale metric visualizations
+  - Close button with Teleport
+
+- **ChangePasswordModal.vue** (248 lines)
+  - Current password validation
+  - New password with strength meter
+  - Confirmation matching
+  - Error handling
+  - Loading states
+
+- **RecoveryPhraseModal.vue** (173 lines)
+  - 12-word recovery phrase display
+  - Copy to clipboard button
+  - Confirmation workflow
+
+- **ImportBackupModal.vue** (270 lines)
+  - File upload input
+  - Backup import workflow
+  - Password entry for encrypted backup
+  - Error handling
+
+- **CrisisQuickAccess.vue** (100+ lines)
+  - Quick access to crisis resources
+  - Minimal UI design
+
+#### **Chat Components** (2)
+- **TypingIndicator.vue** - Animated dots
+- **ThinkingIndicator.vue** - AI thinking state
+
+#### **Layout** (1)
+- **MainLayout.vue** (43 lines)
+  - Responsive layout wrapper
+  - Conditional desktop sidebar
+  - Mobile header and bottom nav
+  - Top bar with SOS button
+  - Route view container
+  - Crisis modal Teleport
+
+---
+
+### 3. ROUTER CONFIGURATION
+
+**Total Routes: 13**
+
+#### Route Tree Structure:
+```
+/ (LandingPage) - public, no auth required
+├─ /setup (SetupPage) - new user account creation
+├─ /setup/recovery-phrase (RecoveryPhraseSetupPage) - requires auth
+├─ /unlock (UnlockPage) - password entry, dual-mode
+├─ /recovery (RecoveryPage) - password recovery via phrase
+└─ /app (MainLayout wrapper) - requires auth + onboarding
+   ├─ / (DashboardPage) - dashboard with HUD
+   ├─ /chat (ChatPage) - AI chat interface
+   ├─ /activities (ActivitiesPage) - widget/activity hub
+   ├─ /metrics (MetricsPage) - metrics visualization
+   ├─ /journal (JournalPage) - journal interface
+   ├─ /network (NetworkPage) - support network manager
+   └─ /settings (SettingsPage) - app settings
+```
+
+#### Navigation Guards:
+- `requiresAuth`: Redirects locked users to unlock page
+- `requiresOnboarding`: Redirects to onboarding if profile incomplete
+- Automatic redirect from locked pages to dashboard when unlocked
+- Auto-redirect to onboarding from app routes if needed
+
+---
+
+### 4. UX FLOW - FROM LANDING TO DAILY USE
+
+#### **FIRST-TIME USER FLOW:**
+1. Land on LandingPage (/)
+2. Click "Get Started"
+3. SetupPage - Create password with strength validation
+4. RecoveryPhraseSetupPage - Display and save 12-word recovery phrase
+5. OnboardingPage - 10-step profile setup:
+   - Welcome screen
+   - Legal disclaimer
+   - Display name
+   - Recovery philosophy (SMART/12Step/Dharma/Secular)
+   - Substances of focus
+   - Recovery stage (early/established/stable)
+   - Vulnerability patterns (stress/boredom/social/both)
+   - Emergency contact setup
+   - Commitment statement creation
+   - Completion screen
+6. Auto-redirect to DashboardPage
+
+#### **RETURNING USER FLOW:**
+1. Land on UnlockPage
+2. Auto-detect existing vault, show login form
+3. Enter password to unlock
+4. Auto-redirect to DashboardPage (if onboarded) or OnboardingPage
+
+#### **DAILY USE FLOW:**
+1. **Dashboard** (entry point)
+   - View system status HUD
+   - See metric cards with streaks
+   - Check leading indicators
+   - See "next action" task
+   - View pillar health
+   - Quick capture for thoughts
+
+2. **Three Main Engagement Paths:**
+
+   **Path A - Chat with Remi (ChatPage)**
+   - Type message or use quick capture
+   - AI responds with markdown
+   - Widgets embedded in responses
+   - Can complete widgets in chat
+   - Results saved to vault
+
+   **Path B - Activities/Widgets (ActivitiesPage)**
+   - Select date
+   - See daily checklist
+   - Launch widgets for the day
+   - Complete structured exercises
+   - Results aggregated to metrics
+
+   **Path C - Metrics & Tracking (MetricsPage)**
+   - View historical heatmaps
+   - Analyze trends over time
+   - Export data for patterns
+
+3. **Secondary Flows:**
+   - **Journal** (JournalPage) - Structured reflection with templates
+   - **Network** (NetworkPage) - Manage support contacts
+   - **Settings** (SettingsPage) - Configure experience
+
+#### **Crisis Flow (Overlay):**
+- SOS button available on all authenticated pages (TopBar)
+- Crisis detection happens pre-API on all messages
+- Crisis modal shows resources and requires acknowledgment
+- Can call 988, text 741741, or contact emergency contact
+- Blocks certain API flows based on assessment level
+
+---
+
+### 5. DESIGN SYSTEM & TAILWIND STYLING
+
+#### **Color Palette:**
+- **Canvas**: `#020617` (slate-950) - Main background
+- **Surface-1**: `#0f172a` (slate-900) - Primary surface
+- **Surface-2**: `#1e293b` (slate-800) - Secondary surface
+- **Border**: `#334155` (slate-700) - Border color
+- **Accent**: Indigo (indigo-600 primary, indigo-500 hover)
+- **Status**: Emerald (success), Amber (warning), Red (critical)
+
+#### **Typography:**
+- **Font Family**: Inter, SF Pro, Segoe UI, system sans-serif
+- **Monospace**: JetBrains Mono, Roboto Mono, ui-monospace
+- **Text Colors**: slate-100 (primary text), slate-400 (secondary), slate-600 (tertiary)
+
+#### **Component Styling Patterns:**
+- Dark theme with slate grays
+- Rounded corners: `rounded-lg`, `rounded-xl` (consistent)
+- Borders: 1px solid with slate-700
+- Hover states: Background shift + color change + transition-colors
+- Focus ring: 2px indigo-600 with 2px offset (custom in CSS)
+- Shadows: `shadow-lg` with color-specific shadows (e.g., `shadow-indigo-500/20`)
+
+#### **Spacing System:**
+- Padding: p-4, p-6, p-8 for main containers
+- Gap utilities: gap-2, gap-3, gap-4, gap-6
+- Max-width containers: max-w-md, max-w-lg, max-w-5xl, max-w-6xl
+
+#### **Custom Tailwind Configuration:**
+```typescript
+// Colors
+canvas: '#020617'
+surface-1: '#0f172a'
+surface-2: '#1e293b'
+border: '#334155'
+
+// Animations
+'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+'fade-in': 'fadeIn 0.5s ease-out'
+'slide-up': 'slideUp 0.3s ease-out'
+
+// Plugins
+@tailwindcss/typography (for markdown rendering)
+```
+
+---
+
+### 6. ACCESSIBILITY CONSIDERATIONS
+
+#### **Semantic HTML Usage:**
+- Page titles in `<h1>`, `<h2>`, `<h3>` hierarchy
+- `<button>` for interactive elements (not divs)
+- `<form>` for form inputs
+- `<nav>` for navigation sections
+- `<main>` for main content
+- `<header>` and `<footer>` tags
+
+#### **ARIA Attributes:**
+- `role="status"` for system status HUD (dashboard)
+- `role="alertdialog"` for crisis modal
+- `aria-label` for icon buttons (SOS, send, etc.)
+- `aria-describedby` for modal descriptions
+- `aria-modal="true"` for modals
+- `aria-labelledby` for heading references
+- `aria-label` on metric cards describing content
+
+#### **Focus Management:**
+- Focus ring visible with 2px indigo outline (custom CSS)
+- Focus-visible pseudo-selector used to avoid outline on mouse users
+- Focus trap in modals (Teleport to body)
+- Tab order naturally follows document flow
+- Form inputs use `<label>` with `for` attribute or implicit labeling
+
+#### **Color Contrast:**
+- Text colors meet WCAG AA standards
+- Status colors supplemented with text/icons (not color-only)
+- Alert colors have additional indicators (icons, borders)
+
+#### **Keyboard Navigation:**
+- All buttons and links are keyboard accessible
+- Form inputs have proper labels
+- Modal closeable with Escape (via backdrop click)
+- Menu toggles with keyboard support
+
+#### **Screen Reader Support:**
+- Icon buttons have aria-labels
+- Modals have role="alertdialog" and aria-modal
+- Status indicators have role="status"
+- Form errors announced via aria-label
+
+#### **Mobile Accessibility:**
+- Safe-area insets for notch devices (safe-area-inset-top/bottom)
+- Touch target sizes sufficient (44px minimum)
+- Mobile menu properly marked as navigation
+- Proper viewport meta tag handling
+
+---
+
+### 7. MOBILE RESPONSIVENESS APPROACH
+
+#### **Breakpoint Strategy:**
+- Primary breakpoint: `md: 768px`
+- Uses Tailwind's responsive prefix system
+
+#### **Key Responsive Patterns:**
+
+1. **Navigation** (Adaptive)
+   - Desktop: Sidebar (w-64) + main content
+   - Mobile: Bottom nav (6 icons) + mobile header with menu toggle
+   - Breakpoint: `useMediaQuery('(max-width: 768px)')`
+
+2. **Dashboard**
+   - Desktop: 4-column metric cards
+   - Mobile: 2-column metric cards
+   - Full responsive grid system
+
+3. **Modals & Overlays**
+   - Full viewport max-width on mobile
+   - `max-w-md` + `px-4` padding on all screens
+   - Proper z-indexing (z-50 for modals)
+
+4. **Text & Typography**
+   - Hero heading: `text-4xl md:text-6xl`
+   - Responsive font sizes throughout
+   - Hidden elements: `hidden md:flex`, `hidden sm:inline`
+
+5. **Buttons**
+   - Full width (`w-full sm:w-auto`) for stacked/inline options
+   - Consistent padding (py-3, py-4 depending on context)
+
+6. **Landing Page**
+   - Grid layouts: 1-2-4 column progression
+   - Flex direction column/row based on screen
+   - Max-width constraints with auto margin
+
+#### **Safe Area Insets:**
+- Bottom nav uses `safe-area-inset-bottom` for notch devices
+- Handled via CSS utility classes
+
+#### **Touch Optimization:**
+- Button sizes: minimum 44px (actual: 48-56px)
+- Adequate padding for touch targets
+- Icon sizes scaled appropriately
+
+---
+
+### 8. ANIMATIONS & MICRO-INTERACTIONS
+
+#### **Page-Level Animations:**
+- **Fade-in**: `animate-fade-in` on page load (0.5s)
+- **Slide-up**: `animate-slide-up` on new messages (0.3s)
+- **Scroll-reveal**: Landing page elements with scroll detection
+  - Opacity: 0 → 1
+  - Transform: translateY(20px) → translateY(0)
+  - Duration: 0.6s
+  - Staggered with `--delay` CSS variable
+
+#### **Component-Level Animations:**
+1. **Typing Indicator** (ThinkingIndicator)
+   - Pulsing dot animation (1.4s total, staggered delays)
+   - 3 dots with -0.32s, -0.16s, 0s delays
+
+2. **Status Indicators**
+   - `animate-pulse-slow` (3s pulse for nominal state)
+   - `animate-flash` (1s flash for critical state)
+   - Custom keyframes in CSS layer
+
+3. **Modal Transitions**
+   - Fade-in on appearance
+   - Backdrop blur
+   - Scale/opacity combo for content
+   - 200-300ms duration
+
+4. **Button Hover States**
+   - Background color shift + transition-colors (150ms)
+   - Icon translate on hover (group-hover:translate-x-0.5)
+   - Shadow enhancement on critical buttons
+
+5. **Menu Toggles**
+   - Slide-down from top (0.2s)
+   - Opacity transition (0.15s leave)
+   - Smooth coordinate transitions
+
+6. **Form Elements**
+   - Focus border color change + ring appearance
+   - Smooth transition on all interactive states
+   - Character count updates (no animation)
+
+7. **Widget-Specific:**
+   - Urge surf wave animation (continuous)
+   - Timer countdowns with numeric updates
+   - Progress bars with smooth width transitions
+   - Checkbox animations on click
+
+#### **Global Animation Variables:**
+```css
+@keyframes fadeIn {
+  0%: opacity: 0
+  100%: opacity: 1
+}
+
+@keyframes slideUp {
+  0%: opacity: 0, transform: translateY(10px)
+  100%: opacity: 1, transform: translateY(0)
+}
+
+@keyframes typingPulse {
+  0%, 80%, 100%: transform: scale(0.6), opacity: 0.5
+  40%: transform: scale(1), opacity: 1
+}
+
+@keyframes flash {
+  0%, 50%, 100%: opacity: 1
+  25%, 75%: opacity: 0.5
+}
+
+@keyframes pulse-slow {
+  0%, 100%: opacity: 1
+  50%: opacity: 0.7
+}
+```
+
+#### **Transition Classes Used:**
+- `transition-colors` (most common)
+- `transition-all` (complete property changes)
+- `transition-opacity` (fade effects)
+- `transition-transform` (motion)
+- Various durations: 150ms, 200ms, 300ms, 500ms
+
+#### **Micro-interactions:**
+- SOS button: Hover color shift + border glow effect
+- Input focus: Border color + ring appearance
+- Completed checkbox: Scale animation + color change
+- Menu open/close: Rotation of menu icon + fade of menu
+- Widget complete: Success feedback with icon + color change
+- Error state: Flash animation on invalid form
+
+---
+
+### 9. COMPLETENESS & POLISH ASSESSMENT
+
+#### **Strengths:**
+
+✅ **Comprehensive Feature Set:**
+- 13 full-featured pages covering entire user journey
+- 11 interactive widgets for CBT/SMART recovery techniques
+- Complete onboarding flow with data collection
+- Crisis support integrated at every level
+- Multi-page settings/configuration system
+
+✅ **Polish & Polish:**
+- Consistent design language across all pages
+- Smooth animations and transitions throughout
+- Dark theme well-implemented with good contrast
+- Responsive design with mobile-first approach
+- Loading states and error handling present
+- Accessibility considerations (ARIA, semantic HTML)
+- Icon system (lucide-vue-next) consistent throughout
+
+✅ **User Experience:**
+- Clear information hierarchy
+- Logical flow from landing → setup → dashboard → usage
+- Quick capture for low-friction interaction
+- Widget completion state preservation
+- Data restoration after refresh
+- Time-aware task scheduling on dashboard
+
+✅ **Recovery-Specific Features:**
+- Crisis detection and emergency resources
+- Evidence-based frameworks (SMART, CBT, Stoic)
+- Support network management
+- Commitment statement tracking
+- Leading indicators detection
+- System status HUD for at-a-glance health
+
+#### **Potential Gaps:**
+
+⚠️ **Mobile-Specific Polish:**
+- Mobile header menu overlay could use better animation polish
+- Some pages may need additional mobile optimization testing
+- Keyboard navigation on mobile may need refinement
+
+⚠️ **Data Visualization:**
+- Heatmaps exist but could be more interactive
+- Charts/graphs minimal (focus on metrics tables)
+- Trend visualization relatively basic
+
+⚠️ **Animation Consistency:**
+- While animations exist, some pages have more polish than others
+- Landing page has more elaborate scroll reveals than app pages
+
+⚠️ **Loading States:**
+- Some pages show "Loading..." text, could use skeleton screens
+- Progress indicators present but minimal
+
+⚠️ **Accessibility Depth:**
+- ARIA labels present but not comprehensive across all interactive elements
+- Screen reader testing not evident
+- Some semantic HTML could be more specific
+
+#### **Overall Assessment:**
+
+**Completeness: 8.5/10**
+- All major features present and functional
+- Solid MVP feature set
+- Multi-step onboarding complete
+- Widget system fully implemented
+
+**Polish: 7.5/10**
+- Consistent design language
+- Smooth animations
+- Good mobile responsiveness
+- Dark theme well-executed
+- Could benefit from more micro-interactions
+- Some edge cases may lack polish
+
+**Accessibility: 7/10**
+- Basic ARIA labels present
+- Semantic HTML used appropriately
+- Crisis modal properly marked
+- Could be more comprehensive
+- No apparent keyboard-only testing
+
+**Mobile Experience: 8/10**
+- Bottom navigation works well
+- Responsive layouts present
+- Touch targets adequate
+- Some optimization opportunities remain
+
+---
+
+### 10. KEY FILES & PATHS
+
+```
+UI LAYER STRUCTURE:
+├── src/
+│   ├── pages/ (13 full-page components)
+│   ├── components/
+│   │   ├── widgets/ (11 interactive widgets)
+│   │   ├── navigation/ (DesktopSidebar, MobileHeader, MobileBottomNav, TopBar)
+│   │   ├── crisis/ (CrisisModal)
+│   │   └── [5 modals, 2 chat, 1 layout]
+│   ├── layouts/ (MainLayout.vue - responsive wrapper)
+│   ├── router/ (router/index.ts - 13 routes)
+│   ├── composables/ (useMediaQuery, useChat, useVault, useCrisis, etc.)
+│   ├── assets/styles/ (main.css with Tailwind + custom keyframes)
+│   └── main.ts (Vue + Pinia + Router initialization)
+│
+├── tailwind.config.ts (custom colors, animations, typography plugin)
+├── package.json (Vue 3.5, Vite 6, Tailwind 3.4, lucide icons)
+```
+
+---
+
+### CONCLUSION
+
+The RecoveryLM UI layer is **well-structured and polished** for an MVP. It demonstrates:
+
+- **Strong architectural decisions**: Clear separation of pages, components, and layouts
+- **Consistent design language**: Dark theme, color system, typography hierarchy
+- **Recovery-focused UX**: Every feature designed with the user's recovery journey in mind
+- **Mobile-first approach**: Responsive design with proper breakpoints and safe areas
+- **Animation & polish**: Smooth transitions, micro-interactions, scroll reveals
+- **Accessibility awareness**: ARIA labels, semantic HTML, focus management
+- **Comprehensive feature coverage**: 13 pages, 11 widgets, complete user journeys
+
+Areas for enhancement would be deeper accessibility testing, more sophisticated data visualizations, and additional loading state polish, but the current implementation represents a solid, usable, and user-focused recovery application.</result>
+<usage><total_tokens>82596</total_tokens><tool_uses>53</tool_uses><duration_ms>112815</duration_ms></usage>
+</task-notification>
+Full transcript available at: REDACTED.output
+
+---
+
+What are you doing executing python?
+
+---
+
+<task-notification>
+<task-id>ad7949a5ef73b99a4</task-id>
+<tool-use-id>toolu_011LQJKncwnNfJ4Ah23DkQ1X</tool-use-id>
+<status>completed</status>
+<summary>Agent "Analyze app architecture depth" completed</summary>
+<result>Now I have enough information for a comprehensive assessment. Let me compile the full analysis.
+
+---
+
+# RecoveryLM - Comprehensive Codebase Assessment
+
+## Executive Summary
+
+RecoveryLM is a well-architected, locally-first PWA for addiction recovery. The core systems are genuinely complete and production-quality in many areas - the encryption model is solid, the widget system is fully implemented, and the AI integration is thoughtful. The codebase demonstrates consistent patterns and intentional design. Key gaps are: zero test coverage, a critical API key security flaw in the current deployment model, duplicated service implementations, and some incomplete features in the data layer.
+
+---
+
+## Architecture Overview
+
+### Layer Map
+
+```
+User Interaction (Pages / Components)
+     |
+Composables (useChat, useVault, useCrisis, useAutoLock)
+     |
+Services (vault, orchestrator, crisisHandler, sessionSummarizer, activityInsights)
+     |
+Agent Layer (runner, tools, messages, session)
+     |
+Inference Layer (AnthropicProvider - streaming + agentic)
+     |
+Database Layer (Dexie.js IndexedDB via vault.ts)
+     |
+Crypto Layer (AES-GCM-256 + PBKDF2 via crypto.ts)
+```
+
+### Routing Architecture
+
+`/Users/fieldbradley/Projects/recoverylm/src/router/index.ts`
+
+All protected routes use two guards: `requiresAuth` (vault unlocked) and `requiresOnboarding` (profile complete). The guard calls `getProfile()` on every protected navigation - this works but results in a decryption call on every route change.
+
+---
+
+## Feature-by-Feature Analysis
+
+### 1. Vault / Encryption Layer - SOLID
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/services/crypto.ts`, `/Users/fieldbradley/Projects/recoverylm/src/services/vault.ts`, `/Users/fieldbradley/Projects/recoverylm/src/services/database.ts`
+
+The encryption implementation is genuinely well done:
+
+- AES-GCM-256 with PBKDF2 key derivation (100,000 iterations, SHA-256)
+- Fresh IV generated per encryption operation (correct)
+- Key held only in module-level memory variables (`currentKey`, `currentSalt`), never persisted
+- Every write goes through `encryptObject()`, every read through `decryptObject()`
+- The database schema stores only `EncryptedPayload` structs - no plaintext data touches IndexedDB
+
+**Strengths:**
+- `changePassword()` and `resetPasswordWithRecoveryPhrase()` both do full atomic re-encryption of the entire database in a single Dexie transaction - this is correct and thorough
+- `exportEncryptedBackup()` exports the raw encrypted blobs, so backups are safe at rest
+- Vault state is reactive via `useVault` composable (lines 20-31 of `useVault.ts`)
+
+**Issues:**
+
+1. **Recovery phrase entropy is inadequate.** The word list in `crypto.ts` (lines 142-174) contains only ~200 words, not the standard BIP39 2048. The comment says "Simplified word list (in production, use full BIP39 list)" - this is explicitly deferred. With 200 words and 12 words chosen, the entropy is ~log2(200^12) ≈ 92 bits, vs BIP39's 128 bits. Acceptable for the use case but should be noted.
+
+2. **Recovery phrase key derivation is deterministic from the phrase alone** (crypto.ts lines 196-207). This means if someone knows the phrase, they can brute-force without any stored salt. The salt is derived by SHA-256 hashing the phrase itself. This is intentional for recovery-without-device, but it means the phrase must be kept secret with the same care as the password.
+
+3. **PBKDF2_ITERATIONS = 100,000** - this is the 2021 NIST recommendation minimum. Should be increased to 600,000 for current best practice.
+
+4. **Database schema versions 1-3 exist but are all retained** (database.ts lines 118-174). Dexie handles migrations correctly but the version 1 schema lacks `metricsConfig`, `activityLogs`, and `dailyPracticeConfig` tables. If a user somehow has v1 data they'd be missing features silently.
+
+---
+
+### 2. Crisis Detection - COMPLETE WITH GAPS
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/services/crisisHandler.ts`, `/Users/fieldbradley/Projects/recoverylm/src/composables/useCrisis.ts`
+
+The EMERGENCY → URGENT → CONCERN → MONITOR cascade is properly implemented with regex pattern matching. The architectural constraint "crisis detection runs before any API call" is correctly enforced in `useChat.ts` at line 112.
+
+**Crisis modal** (`CrisisModal.vue`) is solid: uses `role="alertdialog"`, requires explicit acknowledgment before dismissal, shows 988/741741/SAMHSA resources with direct tap-to-call links. The emergency contact display is wired up but `resources.emergencyContact` will always be `undefined` because `getCrisisResources()` in crisisHandler.ts never loads it from the vault (line 179-186 shows no vault call). This is a real gap - the emergency contact UI exists but never populates.
+
+**Pattern coverage gaps:**
+- No patterns for common euphemisms ("doing a line", "getting hammered", "slip")
+- Comment at line 165 says "Stage 2: AI classification would go here for ambiguous cases" - this is explicitly deferred/missing. Ambiguous phrasing would be missed.
+- Context parameters (`recentVelocity`, `timeOfDay`) in `assessCrisis()` are never passed by `useChat.ts` - those escalation modifiers are dead code currently.
+
+---
+
+### 3. Chat Flow & Agent System - WELL IMPLEMENTED
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/composables/useChat.ts`, `/Users/fieldbradley/Projects/recoverylm/src/agent/runner.ts`, `/Users/fieldbradley/Projects/recoverylm/src/services/inference/anthropic.ts`
+
+The agentic loop is properly structured as an async generator (`runAgent`), following a clean event-based pattern. The flow:
+
+1. Crisis check (`assessMessage`)
+2. User message persisted to vault
+3. Context window built (`buildContextWindow` - parallel vault fetches)
+4. Agent loop runs (max 5 iterations)
+5. Each iteration: API call → token streaming → check for `tool_use` → execute tool → continue or break
+6. On completion: `parseWidgetCommands` strips widget syntax from text, final message persisted
+
+**Token streaming architecture** has a subtle design note: tokens are emitted via `onToken` callback for real-time UI updates, but the generator also emits a `token` event with the full accumulated text after each API call completes. The `handleStreamEvent` in `useChat.ts` only uses the callback path for real-time updates (line 241: "Token streaming is now handled via the onToken callback"). The generator's `token` events are used just to track `accumulatedText`. This works but is somewhat confusing.
+
+**The retry logic** in `anthropic.ts` (lines 19-44) handles `overloaded_error`, `rate_limit_error`, `api_error` with exponential backoff. Well done for a production app.
+
+**Greeting generation** bypasses the agent loop and calls `streamMessage` directly (no tool use for greetings). This is correct since the greeting context already contains everything needed.
+
+---
+
+### 4. Context Window / Orchestrator - COMPLETE
+
+**File:** `/Users/fieldbradley/Projects/recoverylm/src/services/orchestrator.ts`
+
+`buildContextWindow` runs 7 vault operations in parallel (line 287), then assembles the full context including: system prompt, user profile, recent metrics, leading indicators, current session history, recent session summaries, support network, and activity insights.
+
+`buildSystemPrompt` in `anthropic.ts` (lines 308-460) assembles the final prompt with all dynamic context sections appended. This is thorough and includes: commitment statement, vulnerability pattern, substances, temporal context, therapist guidance, leading indicators, recent metrics (as a dense summary), activity usage, session history, support network. Well designed.
+
+**Notable gap:** `relevantHistory` (the `JournalEntry[]` in `ContextWindow`) is always `[]` in `buildContextWindow` (line 303). The comment says "simplified - in production would do semantic search." Journal content never reaches the AI context window.
+
+---
+
+### 5. Widget System - FULLY IMPLEMENTED
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/components/widgets/`
+
+All 11 widgets defined in `WidgetId` type have corresponding `.vue` implementations. The `WidgetRenderer.vue` uses `defineAsyncComponent` for code splitting and `<Suspense>` for loading states.
+
+All widgets:
+- Accept `completionState?: WidgetCompletionState` prop for restoring persisted state
+- Emit `complete` events with typed result data
+- Have polished UI with proper loading/completion states
+
+Widget quality breakdown:
+- `W_CHECKIN` - full featured, loads user's custom metrics config
+- `W_DENTS` - has a real 10-minute countdown timer with pause/resume
+- `W_TAPE` - multi-step with step-gated progression
+- `W_EVIDENCE`, `W_STOIC`, `W_THOUGHTLOG` - structured CBT workflows
+- `W_URGESURF` - guided meditation timer
+- `W_GRATITUDE`, `W_SELFAPPRECIATION` - journaling widgets
+- `W_COMMITMENT`, `W_NETWORK` - data management widgets
+
+The parser (`widgetParser.ts`) is correct but has a subtle issue: `WIDGET_PATTERN` regex at line 4 uses `{[^}]*}` which only matches flat JSON objects - nested JSON in widget params would break it.
+
+---
+
+### 6. Agent Tools - COMPLETE BUT DUPLICATED
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/agent/tools/` and `/Users/fieldbradley/Projects/recoverylm/src/services/agentTools.ts`
+
+There are two separate implementations of the same three tools:
+- `/src/agent/tools/` - new zod-validated SDK-style tools
+- `/src/services/agentTools.ts` - older manual implementation
+
+Both implement `search_conversations`, `get_metrics`, `search_journal` with nearly identical logic. The runner uses `AGENT_TOOLS` from `agentTools.ts` (runner.ts line 107: "use legacy AGENT_TOOLS for API compatibility") but then calls `executeToolByName` from the new `/src/agent/tools/` registry (runner.ts line 180). This is a split-brain situation - tool definitions come from one place, execution from another. The comment in runner.ts acknowledges this. This should be unified.
+
+---
+
+### 7. Session Summarizer & Activity Insights - SOLID
+
+**Files:** `/Users/fieldbradley/Projects/recoverylm/src/services/sessionSummarizer.ts`, `/Users/fieldbradley/Projects/recoverylm/src/services/activityInsights.ts`
+
+Both services use keyword/pattern heuristics (no LLM calls) for efficiency. Session summaries include themes, emotional arc, widgets used, end state, and intentions - all derived from regex/keyword matching. This is smart: it keeps the greeting context rich without extra API costs.
+
+Activity insights track completion counts, last-used times, time-window filtering (morning/evening activities), and practice gaps (enabled but not used in 2+ weeks).
+
+---
+
+### 8. PWA Configuration - ADEQUATE BUT LIMITED
+
+**File:** `/Users/fieldbradley/Projects/recoverylm/vite.config.ts`
+
+The PWA manifest is properly configured with `standalone` display mode and icons for 192/512px. The workbox config caches all static assets and sets `NetworkOnly` for Anthropic API calls (correct - API responses should never be cached).
+
+**Gaps:**
+- No offline fallback page configured. If the user opens the app offline for the first time after the SW installs, they get a blank page rather than an "offline" message.
+- The `registerType: 'autoUpdate'` means new versions install silently. For a health app, a user notification about updates would be better practice.
+- No push notification infrastructure despite `AppSettings.notificationsEnabled` existing in the type system. The setting exists but does nothing.
+- No background sync for any pending data writes.
+
+---
+
+### 9. Anthropic API Integration - SECURITY CONCERN
+
+**File:** `/Users/fieldbradley/Projects/recoverylm/src/services/inference/anthropic.ts`
+
+The integration is functionally complete: both `streamMessage` (non-agentic) and `streamAgenticMessage` (with tool use) are implemented. The `dangerouslyAllowBrowser: true` flag is required for browser SDK usage and is correctly used.
+
+**Critical security issue:** The app passes `VITE_ANTHROPIC_API_KEY` directly to the browser bundle via Vite's `define` in `vite.config.ts` (lines 11-19). The key is embedded in the built JavaScript. Anyone who downloads the app can extract it from the bundle. The code does support a proxy mode (`VITE_API_PROXY_URL`) which is the correct architecture - but in the current default deployment mode the key is exposed.
+
+The `MODEL` constant is hardcoded to `'claude-sonnet-4-5'` at line 10. CLAUDE.md says `claude-haiku-4-5` - there's a discrepancy. Sonnet is significantly more expensive than Haiku.
+
+---
+
+### 10. Onboarding - COMPLETE
+
+**File:** `/Users/fieldbradley/Projects/recoverylm/src/pages/OnboardingPage.vue`
+
+The onboarding flow covers: welcome → disclaimer → name → philosophy → substance → stage → vulnerability → emergency-contact → commitment → complete. The `complete()` function saves both the user profile and emergency contact to the vault. The type definition includes `primary-support`, `backup-support`, `security-setup` steps that are defined in `OnboardingStep` type but are not in `STEP_ORDER` (lines 25-28 of OnboardingPage) - they've been removed from the flow. This is fine as a simplification but the types are slightly stale.
+
+---
+
+## Code Quality Assessment
+
+### Strengths
+
+- Consistent TypeScript usage throughout - strict mode, proper interfaces, no `any` in production code paths
+- Module-level singleton state in composables (`messages`, `isUnlocked`, etc.) is an intentional architectural choice enabling cross-component state sharing without Pinia stores for most things
+- Error handling is present and consistent: every vault operation wraps in try/catch and returns meaningful error state
+- The CLAUDE.md architecture doc accurately describes the codebase - this was clearly written alongside the code, not after
+- Lucide icons used consistently throughout UI
+- Tailwind utility classes are consistent and the dark theme is well executed
+
+### Weaknesses
+
+- **Zero test coverage.** Not a single `.test.ts` or `.spec.ts` file exists. For a health app handling crisis detection and encrypted health data, this is the most significant quality gap.
+- **Duplicate business logic:** `agentTools.ts` and `agent/tools/` have nearly identical implementations. `calculateTrends()` is duplicated in both `agentTools.ts` and `agent/tools/getMetrics.ts`.
+- **Module-level shared state in composables** creates implicit global state. `messages`, `currentSessionId`, `sessionInitialized` in `useChat.ts` (lines 22-30) are module-level `ref`s, meaning all component instances share the same state. This is intentional but means you cannot have two independent chat instances.
+- **`useVault` calls `checkInitialState()` at module load time** (line 31 of useVault.ts), which is a side effect on import. This works in practice but is a testing anti-pattern.
+
+---
+
+## Security Concerns
+
+### High Severity
+
+1. **API key in browser bundle** - `VITE_ANTHROPIC_API_KEY` is embedded in the built JavaScript via Vite's `define`. Anyone with the app can extract it using browser devtools or by downloading the JS file. The proxy mode (`VITE_API_PROXY_URL`) exists and is the right solution, but it's not the default path.
+
+### Medium Severity
+
+2. **Recovery phrase word list is too small** (200 words vs BIP39's 2048). Phrases can be brute-forced faster than standard. The code comment acknowledges this.
+
+3. **PBKDF2 iterations are below current recommendations.** 100,000 is the 2021 minimum; current NIST SP 800-132 (2023) recommends 600,000 for SHA-256. A determined attacker with offline access to the encrypted backup could crack weak passwords faster than expected.
+
+4. **Emergency contact never loads in CrisisModal.** The `getCrisisResources()` function returns a static object with no vault call. If a user has configured an emergency contact, it will never appear in the crisis modal. This is a safety feature regression.
+
+### Low Severity
+
+5. **`console.log('Anthropic API key configured:', ...)` in vite.config.ts** (line 14) logs to the build output on every build. Not a runtime exposure but worth noting.
+
+6. **Journal entries never reach AI context.** `relevantHistory` is always empty. This is a privacy-protective default but removes the intended "persistent memory" feature.
+
+7. **No rate limiting on crisis detection.** A user could theoretically send many rapid messages. The `assessMessage` runs synchronously before each API call but there's no debounce or rate limit on the chat input.
+
+---
+
+## What's Fully Implemented vs. Incomplete
+
+### Fully Implemented
+- Vault encryption/decryption for all data types
+- Password change and recovery phrase reset (full re-encryption)
+- Import/export encrypted backup
+- All 11 widgets with completion state persistence
+- Crisis detection and modal with crisis resources
+- Agent loop with tool use (search_conversations, get_metrics, search_journal)
+- Streaming AI responses with real-time token display
+- Session summarization (heuristic)
+- Activity insights and daily practice configuration
+- Auto-lock with inactivity detection
+- Custom metrics configuration
+- Support network management
+- Journal with templates
+
+### Incomplete / Stubbed
+
+- **Emergency contact in crisis modal** - wired in types, UI exists, but vault data never loads
+- **Relevant history / semantic search** - `relevantHistory` always `[]` in context window
+- **Push notifications** - type/setting exists, never implemented
+- **AI crisis classification** - comment says "Stage 2: AI classification would go here"
+- **`assessCrisis` context params** - `recentVelocity` and `timeOfDay` context modifiers are never passed from `useChat`
+- **Therapist integration** - `TherapistGuidance` type and vault methods exist, UI for adding guidance is only in `SettingsPage` (partially), no therapist-facing export UI
+- **`TherapistSummary` and `StatusReport` types** - defined in types/index.ts, no implementation
+- **Recovery phrase word list** - explicitly noted as "simplified, use BIP39 in production"
+- **Journal full-text search** - `search_journal` tool only searches by tags, not content
+
+---
+
+## Essential Files Reference
+
+For understanding the codebase:
+
+| Purpose | File |
+|---------|------|
+| Type definitions (data model) | `/Users/fieldbradley/Projects/recoverylm/src/types/index.ts` |
+| Encryption implementation | `/Users/fieldbradley/Projects/recoverylm/src/services/crypto.ts` |
+| Vault service (all data ops) | `/Users/fieldbradley/Projects/recoverylm/src/services/vault.ts` |
+| IndexedDB schema | `/Users/fieldbradley/Projects/recoverylm/src/services/database.ts` |
+| Chat composable (main flow) | `/Users/fieldbradley/Projects/recoverylm/src/composables/useChat.ts` |
+| Agent runner (agentic loop) | `/Users/fieldbradley/Projects/recoverylm/src/agent/runner.ts` |
+| Anthropic integration | `/Users/fieldbradley/Projects/recoverylm/src/services/inference/anthropic.ts` |
+| Context window assembly | `/Users/fieldbradley/Projects/recoverylm/src/services/orchestrator.ts` |
+| Crisis detection | `/Users/fieldbradley/Projects/recoverylm/src/services/crisisHandler.ts` |
+| Widget parser | `/Users/fieldbradley/Projects/recoverylm/src/services/widgetParser.ts` |
+| Widget renderer | `/Users/fieldbradley/Projects/recoverylm/src/components/widgets/WidgetRenderer.vue` |
+| System prompt | `/Users/fieldbradley/Projects/recoverylm/src/prompts/remmi.ts` |
+| Router with guards | `/Users/fieldbradley/Projects/recoverylm/src/router/index.ts` |
+| PWA config | `/Users/fieldbradley/Projects/recoverylm/vite.config.ts` |
+
+---
+
+## Recommended Priority Actions
+
+1. **Fix the emergency contact in crisis modal** - this is a safety bug. `getCrisisResources()` must read from the vault when available.
+
+2. **Move API key to server proxy** - the proxy infrastructure already exists in the codebase. The current direct-key model should not ship publicly.
+
+3. **Add tests for crisis detection patterns** - the regex patterns in `crisisHandler.ts` are safety-critical and have no test coverage. A wrong pattern could block a genuine crisis or fail to catch one.
+
+4. **Unify the duplicate tool implementations** - merge `agentTools.ts` into `agent/tools/` to eliminate the split-brain architecture.
+
+5. **Pass crisis context params** - wire `timeOfDay` into `assessCrisis()` call in `useChat.ts` to activate the late-night escalation logic that currently does nothing.
+
+6. **Address the PBKDF2 iteration count** before broad distribution - 600,000 is the current recommendation.</result>
+<usage><total_tokens>120144</total_tokens><tool_uses>43</tool_uses><duration_ms>218423</duration_ms></usage>
+</task-notification>
+Full transcript available at: REDACTED.output
+
+---
+
+thiis a personal tool I've deployed. Anyone can use it. They don't need an Anthropic key. It is free. They don't even need to download it.
+
+---
+
+yes, I host it, but it runs in the users browser and uses the browser db.
+
+---
+
+No, but I now want you to suggest new features.
+
+---
+
+Create github issues for each of these features, all of them
+
+---
+
+ok let's start on the memory feature, check out a branch and get started
+
+---
+
+Base directory for this skill: /Users/fieldbradley/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/brainstorming
+
+# Brainstorming Ideas Into Designs
+
+## Overview
+
+Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
+
+Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+<HARD-GATE>
+Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+</HARD-GATE>
+
+## Anti-Pattern: "This Is Too Simple To Need A Design"
+
+Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+
+## Checklist
+
+You MUST create a task for each of these items and complete them in order:
+
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design** — in sections scaled to their complexity, get user approval after each section
+5. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+
+## Process Flow
+
+```dot
+digraph brainstorming {
+    "Explore project context" [shape=box];
+    "Ask clarifying questions" [shape=box];
+    "Propose 2-3 approaches" [shape=box];
+    "Present design sections" [shape=box];
+    "User approves design?" [shape=diamond];
+    "Write design doc" [shape=box];
+    "Invoke writing-plans skill" [shape=doublecircle];
+
+    "Explore project context" -> "Ask clarifying questions";
+    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Propose 2-3 approaches" -> "Present design sections";
+    "Present design sections" -> "User approves design?";
+    "User approves design?" -> "Present design sections" [label="no, revise"];
+    "User approves design?" -> "Write design doc" [label="yes"];
+    "Write design doc" -> "Invoke writing-plans skill";
+}
+```
+
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+## The Process
+
+**Understanding the idea:**
+- Check out the current project state first (files, docs, recent commits)
+- Ask questions one at a time to refine the idea
+- Prefer multiple choice questions when possible, but open-ended is fine too
+- Only one question per message - if a topic needs more exploration, break it into multiple questions
+- Focus on understanding: purpose, constraints, success criteria
+
+**Exploring approaches:**
+- Propose 2-3 different approaches with trade-offs
+- Present options conversationally with your recommendation and reasoning
+- Lead with your recommended option and explain why
+
+**Presenting the design:**
+- Once you believe you understand what you're building, present the design
+- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
+- Ask after each section whether it looks right so far
+- Cover: architecture, components, data flow, error handling, testing
+- Be ready to go back and clarify if something doesn't make sense
+
+## After the Design
+
+**Documentation:**
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Use elements-of-style:writing-clearly-and-concisely skill if available
+- Commit the design document to git
+
+**Implementation:**
+- Invoke the writing-plans skill to create a detailed implementation plan
+- Do NOT invoke any other skill. writing-plans is the next step.
+
+## Key Principles
+
+- **One question at a time** - Don't overwhelm with multiple questions
+- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **YAGNI ruthlessly** - Remove unnecessary features from all designs
+- **Explore alternatives** - Always propose 2-3 approaches before settling
+- **Incremental validation** - Present design, get approval before moving on
+- **Be flexible** - Go back and clarify when something doesn't make sense
+
+
+ARGUMENTS: Implement persistent memory for Remi (issue #12) — populate the relevantHistory field in buildContextWindow with meaningful past context from journal entries and chat messages using client-side keyword/TF-IDF matching against encrypted vault data
+
+---
+
+Approach A enhanced with Approach B. But Remi should already be bringing in history to each conversation. Is that not the case?
+
+---
+
+yes that's the gap, let's move forward
+
+---
+
+Yes, but bump the token limit for the history, we need to double that at least, more like triple.
+
+---
+
+Base directory for this skill: /Users/fieldbradley/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/writing-plans
+
+# Writing Plans
+
+## Overview
+
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
+
+**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
+```markdown
+# [Feature Name] Implementation Plan
+
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
+```
+
+## Task Structure
+
+````markdown
+### Task N: [Component Name]
+
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
+
+**Step 1: Write the failing test**
+
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+**Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
+```
+````
+
+## Remember
+- Exact file paths always
+- Complete code in plan (not "add validation")
+- Exact commands with expected output
+- Reference relevant skills with @ syntax
+- DRY, YAGNI, TDD, frequent commits
+
+## Execution Handoff
+
+After saving the plan, offer execution choice:
+
+**"Plan complete and saved to `docs/plans/<filename>.md`. Two execution options:**
+
+**1. Subagent-Driven (this session)** - I dispatch fresh subagent per task, review between tasks, fast iteration
+
+**2. Parallel Session (separate)** - Open new session with executing-plans, batch execution with checkpoints
+
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Stay in this session
+- Fresh subagent per task + code review
+
+**If Parallel Session chosen:**
+- Guide them to open new session in worktree
+- **REQUIRED SUB-SKILL:** New session uses superpowers:executing-plans
+
+
+ARGUMENTS: Implement the Remi memory feature per docs/plans/2026-02-21-remi-memory-design.md. Four files to touch: new memorySearch.ts service, update types/index.ts, update orchestrator.ts, update anthropic.ts.
+
+---
+
+1
+
+---
+
+Base directory for this skill: /Users/fieldbradley/.claude/plugins/cache/claude-plugins-official/superpowers/4.3.1/skills/subagent-driven-development
+
+# Subagent-Driven Development
+
+Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+
+**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+## When to Use
+
+```dot
+digraph when_to_use {
+    "Have implementation plan?" [shape=diamond];
+    "Tasks mostly independent?" [shape=diamond];
+    "Stay in this session?" [shape=diamond];
+    "subagent-driven-development" [shape=box];
+    "executing-plans" [shape=box];
+    "Manual execution or brainstorm first" [shape=box];
+
+    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
+    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
+    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
+    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+}
+```
+
+**vs. Executing Plans (parallel session):**
+- Same session (no context switch)
+- Fresh subagent per task (no context pollution)
+- Two-stage review after each task: spec compliance first, then code quality
+- Faster iteration (no human-in-loop between tasks)
+
+## The Process
+
+```dot
+digraph process {
+    rankdir=TB;
+
+    subgraph cluster_per_task {
+        label="Per Task";
+        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+        "Implementer subagent asks questions?" [shape=diamond];
+        "Answer questions, provide context" [shape=box];
+        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
+        "Implementer subagent fixes spec gaps" [shape=box];
+        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Code quality reviewer subagent approves?" [shape=diamond];
+        "Implementer subagent fixes quality issues" [shape=box];
+        "Mark task complete in TodoWrite" [shape=box];
+    }
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
+    "More tasks remain?" [shape=diamond];
+    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
+    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
+    "Mark task complete in TodoWrite" -> "More tasks remain?";
+    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+}
+```
+
+## Prompt Templates
+
+- `./implementer-prompt.md` - Dispatch implementer subagent
+- `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
+- `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+
+## Example Workflow
+
+```
+You: I'm using Subagent-Driven Development to execute this plan.
+
+[Read plan file once: docs/plans/feature-plan.md]
+[Extract all 5 tasks with full text and context]
+[Create TodoWrite with all tasks]
+
+Task 1: Hook installation script
+
+[Get Task 1 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: "Before I begin - should the hook be installed at user or system level?"
+
+You: "User level (~/.config/superpowers/hooks/)"
+
+Implementer: "Got it. Implementing now..."
+[Later] Implementer:
+  - Implemented install-hook command
+  - Added tests, 5/5 passing
+  - Self-review: Found I missed --force flag, added it
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
+
+[Get git SHAs, dispatch code quality reviewer]
+Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+
+[Mark Task 1 complete]
+
+Task 2: Recovery modes
+
+[Get Task 2 text and context (already extracted)]
+[Dispatch implementation subagent with full task text + context]
+
+Implementer: [No questions, proceeds]
+Implementer:
+  - Added verify/repair modes
+  - 8/8 tests passing
+  - Self-review: All good
+  - Committed
+
+[Dispatch spec compliance reviewer]
+Spec reviewer: ❌ Issues:
+  - Missing: Progress reporting (spec says "report every 100 items")
+  - Extra: Added --json flag (not requested)
+
+[Implementer fixes issues]
+Implementer: Removed --json flag, added progress reporting
+
+[Spec reviewer reviews again]
+Spec reviewer: ✅ Spec compliant now
+
+[Dispatch code quality reviewer]
+Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+
+[Implementer fixes]
+Implementer: Extracted PROGRESS_INTERVAL constant
+
+[Code reviewer reviews again]
+Code reviewer: ✅ Approved
+
+[Mark Task 2 complete]
+
+...
+
+[After all tasks]
+[Dispatch final code-reviewer]
+Final reviewer: All requirements met, ready to merge
+
+Done!
+```
+
+## Advantages
+
+**vs. Manual execution:**
+- Subagents follow TDD naturally
+- Fresh context per task (no confusion)
+- Parallel-safe (subagents don't interfere)
+- Subagent can ask questions (before AND during work)
+
+**vs. Executing Plans:**
+- Same session (no handoff)
+- Continuous progress (no waiting)
+- Review checkpoints automatic
+
+**Efficiency gains:**
+- No file reading overhead (controller provides full text)
+- Controller curates exactly what context is needed
+- Subagent gets complete information upfront
+- Questions surfaced before work begins (not after)
+
+**Quality gates:**
+- Self-review catches issues before handoff
+- Two-stage review: spec compliance, then code quality
+- Review loops ensure fixes actually work
+- Spec compliance prevents over/under-building
+- Code quality ensures implementation is well-built
+
+**Cost:**
+- More subagent invocations (implementer + 2 reviewers per task)
+- Controller does more prep work (extracting all tasks upfront)
+- Review loops add iterations
+- But catches issues early (cheaper than debugging later)
+
+## Red Flags
+
+**Never:**
+- Start implementation on main/master branch without explicit user consent
+- Skip reviews (spec compliance OR code quality)
+- Proceed with unfixed issues
+- Dispatch multiple implementation subagents in parallel (conflicts)
+- Make subagent read plan file (provide full text instead)
+- Skip scene-setting context (subagent needs to understand where task fits)
+- Ignore subagent questions (answer before letting them proceed)
+- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
+- Skip review loops (reviewer found issues = implementer fixes = review again)
+- Let implementer self-review replace actual review (both are needed)
+- **Start code quality review before spec compliance is ✅** (wrong order)
+- Move to next task while either review has open issues
+
+**If subagent asks questions:**
+- Answer clearly and completely
+- Provide additional context if needed
+- Don't rush them into implementation
+
+**If reviewer finds issues:**
+- Implementer (same subagent) fixes them
+- Reviewer reviews again
+- Repeat until approved
+- Don't skip the re-review
+
+**If subagent fails task:**
+- Dispatch fix subagent with specific instructions
+- Don't try to fix manually (context pollution)
+
+## Integration
+
+**Required workflow skills:**
+- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers:writing-plans** - Creates the plan this skill executes
+- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+
+**Subagents should use:**
+- **superpowers:test-driven-development** - Subagents follow TDD for each task
+
+**Alternative workflow:**
+- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+
+
+ARGUMENTS: Execute docs/plans/2026-02-21-remi-memory-plan.md — 5 tasks for the Remi memory feature
+
+---
+
+I want to test it
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+Before I continue, one thing I notice is that scrolling on the landing page is still not working correctly
+
+---
+
+We've got a bug. I went through the onboarding, and on the last page, when clicking "Lets get started", getting this error: crypto.ts:112 Uncaught (in promise) OperationError
+    at decrypt (crypto.ts:112:41)
+    at decryptObject (crypto.ts:133:28)
+    at Module.getProfile (vault.ts:163:10)
+    at async index.ts:105:21
+decrypt    @    crypto.ts:112
+
+---
+
+I opened the app and it presented the page. I went through onboarding. This is broken regardless. Find the bug.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me go through the conversation chronologically:
+
+1. User asked me to take the role of a product manager and review the project, assess viability as an open source project, and suggest features.
+
+2. I dispatched three background agents to analyze: architecture/code quality, test coverage/CI, and UI/UX completeness. I also read the README, CONTRIBUTING.md, SECURITY.md, and the recovery framework doc.
+
+3. I delivered a comprehensive product assessment covering strengths (encryption, widget system, privacy model, UI polish), weaknesses (zero tests, no CI/CD, no linting, API key exposure concern, crisis detection gaps), and viability analysis.
+
+4. User corrected me: "this is a personal tool I've deployed. Anyone can use it. They don't need an Anthropic key. It is free. They don't even need to download it." - This reframed the assessment significantly. The server proxy is the live path.
+
+5. User further clarified: "yes, I host it, but it runs in the users browser and uses the browser db" - reinforcing the zero-knowledge architecture.
+
+6. User asked me to suggest new features. I proposed 12 features in 3 tiers.
+
+7. User asked me to create GitHub issues for all 12. I created issues #12-#23 on RecoveryLM/recoverylm.
+
+8. User said "ok let's start on the memory feature, check out a branch and get started"
+
+9. I invoked the brainstorming skill, explored the codebase context (orchestrator.ts, anthropic.ts, useChat.ts, vault.ts, types, sessionSummarizer.ts), and identified two gaps: relevantHistory always `[]` in orchestrator, and buildSystemPrompt never renders it.
+
+10. User chose "Both journals and chats" for memory scope.
+
+11. I proposed 3 approaches (keyword extraction, session summary search, TF-IDF). Recommended Approach A enhanced with B. User confirmed.
+
+12. User asked: "But Remi should already be bringing in history to each conversation. Is that not the case?" - I clarified what Remi currently gets (session summaries with theme labels only) vs what's missing (actual content from past conversations and journals).
+
+13. User confirmed the gap and said to move forward. I presented the design with 2400 token budget (user requested bumping from 800 to "double at least, more like triple").
+
+14. I wrote the design doc to docs/plans/2026-02-21-remi-memory-design.md and the implementation plan to docs/plans/2026-02-21-remi-memory-plan.md.
+
+15. User chose "Subagent-Driven" execution. I created branch `feat/12-remi-memory` and dispatched subagents for the 5 tasks.
+
+16. Tasks 1-4 completed successfully. Task 5 (final verification) also completed - typecheck passes, build passes.
+
+17. User wanted to test. I tried to start dev server but user rejected the tool call.
+
+18. User reported: "Before I continue, one thing I notice is that scrolling on the landing page is still not working correctly"
+
+19. I investigated and found the issue: `html, body, #app { height: 100% }` in main.css constrains `#app` to viewport height. Landing page renders directly in `#app` without MainLayout, so content taller than viewport can't scroll. Fixed by splitting to `html, body { height: 100% }` and `#app { min-height: 100% }`.
+
+20. User then reported a bug: "I went through the onboarding, and on the last page, when clicking 'Lets get started', getting this error: crypto.ts:112 Uncaught (in promise) OperationError"
+
+21. I read the relevant files (crypto.ts, vault.ts, router/index.ts, OnboardingPage.vue). The error occurs at router guard line 105 calling getProfile() which tries to decrypt profile data.
+
+22. I asked if it was fresh or existing data. User said "I opened the app and it presented the page. I went through onboarding. This is broken regardless. Find the bug."
+
+23. I read OnboardingPage.vue fully. I was about to investigate the root cause when the summary was requested.
+
+Now let me trace the bug:
+- The error is OperationError in crypto.subtle.decrypt - this means decryption fails (wrong key, corrupted data, or mismatched salt)
+- Flow: OnboardingPage.complete() saves profile → navigates to dashboard → router guard fires → getProfile() → decryptObject → decrypt → OperationError
+- The profile was JUST saved by saveProfile() which encrypts with the current key. Then getProfile() immediately tries to decrypt with the same key. This should work...
+- Wait - let me look more carefully at vault.ts saveProfile and getProfile. The saveProfile uses `db.userProfile.put()` with `{ id: profile.id, data: encrypted, updatedAt: Date.now() }`. The getProfile reads `entries[0].data`. This should be fine.
+- The issue might be in the database schema - the userProfile table might have a different structure than expected, or there could be stale data from a previous failed attempt.
+- Actually, I need to look more carefully. This is a pre-existing bug, not caused by my changes (which only touched orchestrator.ts, anthropic.ts, memorySearch.ts, and types/index.ts - none of which affect the onboarding/crypto flow).
+
+I haven't found the root cause yet. This is the active bug being investigated.
+
+Summary:
+1. Primary Request and Intent:
+   - **Initial request**: User asked me to take the role of a product manager, review the project using the README, dispatch agents to review code, assess the app's state, viability as an open-source project useful to companies, and suggest features to make it special.
+   - **Feature issues**: User asked me to create GitHub issues for all 12 suggested features.
+   - **Memory feature implementation**: User asked to start on the memory feature (issue #12), check out a branch, and build it.
+   - **Bug fixes**: User reported landing page scroll issue and a crypto OperationError bug during onboarding completion, asking me to find and fix the bug.
+
+2. Key Technical Concepts:
+   - Vue 3.5 Composition API + TypeScript 5.6 strict mode + Vite 6
+   - Local-first zero-knowledge architecture: all data encrypted in browser IndexedDB, server is just static files + API proxy
+   - AES-GCM-256 encryption with PBKDF2 key derivation (crypto.ts)
+   - Crisis detection runs BEFORE any API call (useCrisis → useChat flow)
+   - Widget system: 11 interactive therapeutic widgets embedded in AI chat responses via `[WIDGET:W_NAME|{json_params}]` syntax
+   - Context window assembly: orchestrator.ts builds ContextWindow with parallel vault fetches, anthropic.ts renders it into system prompt
+   - Session summarizer: keyword-based theme extraction (not LLM-based) for session history
+   - `relevantHistory` field in ContextWindow was always `[]` — the memory gap
+   - Memory search approach: keyword extraction + theme matching against past journals (60 days) and chat messages (5 sessions), 2400 token budget (~16 entries)
+   - Anthropic SDK with streaming, retry logic, agentic tool-use loop
+
+3. Files and Code Sections:
+
+   - **`src/services/memorySearch.ts`** (CREATED)
+     - New memory search service — the core of the feature
+     - Exports: `extractKeywords()`, `detectThemes()`, `searchRelevantHistory()`
+     - Uses THEME_KEYWORDS dictionary (matching sessionSummarizer patterns), STOP_WORDS set, scoring by keyword + theme hits
+     - Constants: MAX_MEMORY_TOKENS=2400, TOKENS_PER_ENTRY=150, MAX_ENTRIES=16, CHAR_LIMIT_PER_ENTRY=600, JOURNAL_LOOKBACK_DAYS=60, MAX_PAST_SESSIONS=5
+     - Fetches journal entries via `vault.getJournalEntries({ after: cutoff })` and past chats via `vault.getRecentSessions()` + `vault.getChatHistory()`
+     - Scores, deduplicates (by 80-char content prefix), sorts by relevance then date, returns top MAX_ENTRIES items
+     - Full file was created by subagent with the exact code from the plan
+
+   - **`src/types/index.ts`** (MODIFIED)
+     - Added `MemoryItem` interface before `ContextWindow` (around line 347):
+     ```typescript
+     export interface MemoryItem {
+       source: 'journal' | 'chat'
+       date: string
+       content: string
+       relevanceScore: number
+       tags?: JournalTag[]
+       sessionThemes?: string[]
+     }
+     ```
+     - Changed `ContextWindow.relevantHistory` from `JournalEntry[]` to `MemoryItem[]`
+
+   - **`src/services/orchestrator.ts`** (MODIFIED)
+     - Added import: `import { searchRelevantHistory } from '@/services/memorySearch'`
+     - In `buildContextWindow()`: added `searchRelevantHistory(currentMessage, currentSessionId)` to the `Promise.all` parallel fetch, destructured as `relevantHistory`
+     - Removed hardcoded `const relevantHistory: JournalEntry[] = []`
+     - Removed unused `JournalEntry` from imports
+     - `buildGreetingContext()` was NOT changed (greetings don't need memory search)
+
+   - **`src/services/inference/anthropic.ts`** (MODIFIED)
+     - In `buildSystemPrompt()`, added new section after "Recent session history" and before "Support network context" (around line 411):
+     ```typescript
+     // Relevant history (memory)
+     if (context.relevantHistory.length > 0) {
+       const historyLines = context.relevantHistory.map(item => {
+         const tagInfo = item.tags && item.tags.length > 0
+           ? ` [${item.tags.join(', ')}]`
+           : ''
+         return `- [${item.date}, ${item.source}${tagInfo}] "${item.content}"`
+       })
+
+       contextSections.push(
+         '## Relevant History\n' +
+         'Past journal entries and conversations that may relate to what the user is discussing. ' +
+         'Reference naturally if appropriate — don\'t list them or force connections.\n\n' +
+         historyLines.join('\n')
+       )
+     }
+     ```
+     - Note: MODEL constant is `'claude-sonnet-4-5'` (line 10) but CLAUDE.md says `claude-haiku-4-5` — discrepancy noted in review
+
+   - **`src/assets/styles/main.css`** (MODIFIED - landing page scroll fix)
+     - Changed from:
+     ```css
+     html, body, #app {
+       height: 100%;
+     }
+     ```
+     - To:
+     ```css
+     html, body {
+       height: 100%;
+     }
+     #app {
+       min-height: 100%;
+     }
+     ```
+     - This fix has NOT been committed yet.
+
+   - **`src/pages/OnboardingPage.vue`** (READ - for bug investigation)
+     - `complete()` function (line 47-85): saves profile via `saveProfile()`, saves emergency contact, then `router.push({ name: 'dashboard' })`
+     - The "Let's Get Started" button on the `complete` step calls `complete()`
+     - Uses `generateId()` for profile id, `today()` for sobrietyStartDate
+
+   - **`src/services/crypto.ts`** (READ - for bug investigation)
+     - `decrypt()` at line 108-119: uses `crypto.subtle.decrypt` with AES-GCM and the stored IV
+     - `decryptObject<T>()` at line 132-135: calls decrypt then JSON.parse
+     - OperationError at line 112 means the key doesn't match or data is corrupted
+
+   - **`src/services/vault.ts`** (READ - for bug investigation)
+     - `getProfile()` at line 157-164: reads `db.userProfile.toArray()`, decrypts `entries[0].data`
+     - `saveProfile()` at line 166-176: encrypts with current key/salt, puts to `db.userProfile`
+
+   - **`src/router/index.ts`** (READ - for bug investigation)
+     - Line 104-109: `requiresOnboarding` guard calls `getProfile()` — this is where the error occurs
+     - The dashboard route has `meta: { requiresAuth: true, requiresOnboarding: true }`
+
+   - **`src/services/sessionSummarizer.ts`** (READ)
+     - Contains THEME_KEYWORDS dictionary that memorySearch.ts replicates
+     - Provides session summaries (themes, emotional arc, end state, intentions) — this is what Remi currently gets for "history"
+
+   - **`docs/plans/2026-02-21-remi-memory-design.md`** (CREATED) - Design document
+   - **`docs/plans/2026-02-21-remi-memory-plan.md`** (CREATED) - Implementation plan with 5 tasks
+
+4. Errors and Fixes:
+   - **Typecheck error after Tasks 1+2**: `src/services/orchestrator.ts(313,5): error TS2322: Type 'JournalEntry[]' is not assignable to type 'MemoryItem[]'` — Expected, fixed in Task 3 by wiring the orchestrator.
+   - **Landing page scroll bug**: `html, body, #app { height: 100% }` constrained `#app` to viewport height, preventing the landing page (which renders directly in `#app` without MainLayout) from scrolling. Fixed by changing `#app` to `min-height: 100%`. NOT YET COMMITTED.
+   - **Crypto OperationError bug** (ACTIVE): `crypto.ts:112 Uncaught (in promise) OperationError` when clicking "Let's Get Started" on the last onboarding page. Occurs in router guard at `index.ts:105` calling `getProfile()` which tries to decrypt the just-saved profile. User explicitly said "This is broken regardless. Find the bug." — Root cause NOT YET IDENTIFIED.
+
+5. Problem Solving:
+   - Product assessment completed with three parallel code analysis agents
+   - 12 GitHub issues created (#12-#23) for suggested features
+   - Memory feature (issue #12) designed and implemented across 4 files on branch `feat/12-remi-memory`
+   - Landing page scroll issue identified and fixed (not committed)
+   - Crypto OperationError bug under active investigation — I read OnboardingPage.vue, crypto.ts, vault.ts, and router/index.ts but haven't identified root cause yet
+
+6. All User Messages:
+   - "I want you to take the role of a product manager and review our project as it stands now using the README, while you dispatch agents to review the code. Your mission is to tell me the state of the app, it's viability as an open source project which might be useful to companies, and what features we need to add to make this something special, if that is even possible."
+   - "What are you doing executing python?"
+   - "this a personal tool I've deployed. Anyone can use it. They don't need an Anthropic key. It is free. They don't even need to download it."
+   - "yes, I host it, but it runs in the users browser and uses the browser db."
+   - "No, but I now want you to suggest new features."
+   - "Create github issues for each of these features, all of them"
+   - "ok let's start on the memory feature, check out a branch and get started"
+   - User selected "Both journals and chats (Recommended)" for memory scope
+   - "Yes, but bump the token limit for the history, we need to double that at least, more like triple."
+   - User selected "Subagent-Driven (this session)" for execution approach
+   - "I want to test it"
+   - "Before I continue, one thing I notice is that scrolling on the landing page is still not working correctly"
+   - "We've got a bug. I went through the onboarding, and on the last page, when clicking 'Lets get started', getting this error: crypto.ts:112 Uncaught (in promise) OperationError..."
+   - "I opened the app and it presented the page. I went through onboarding. This is broken regardless. Find the bug."
+
+7. Pending Tasks:
+   - **ACTIVE BUG**: Find and fix the crypto OperationError that occurs when completing onboarding and navigating to dashboard. The error is at `crypto.ts:112` in `decrypt()`, called from `getProfile()` in `vault.ts:163`, triggered by the router guard at `router/index.ts:105`.
+   - **Uncommitted fix**: The landing page scroll CSS fix in `main.css` has not been committed yet.
+   - **Memory feature testing**: User wanted to test the memory feature but was interrupted by bugs.
+
+8. Current Work:
+   I was actively investigating the crypto OperationError bug. The user said: "I opened the app and it presented the page. I went through onboarding. This is broken regardless. Find the bug." I had just finished reading OnboardingPage.vue to trace the complete flow: `complete()` calls `saveProfile()` → `router.push({ name: 'dashboard' })` → router guard calls `getProfile()` → `decryptObject()` → `decrypt()` → OperationError. The profile was just saved with the current encryption key, then immediately read back with the same key, so the decryption should work. I need to investigate why it doesn't — possible causes include stale data in IndexedDB from a previous session, the `db.userProfile.put()` storing data incorrectly, or a key/salt mismatch.
+
+9. Optional Next Step:
+   Continue investigating the crypto OperationError bug. The user's exact words were "This is broken regardless. Find the bug." I need to:
+   - Look at the database schema for userProfile table in `database.ts` to check if there's a mismatch between what's stored and what's read
+   - Check `useVault.ts` composable's `saveProfile` wrapper to see if it differs from `vault.ts` direct
+   - Look at how the vault is initialized/unlocked during the setup flow to verify the key is properly set before onboarding starts
+   - Check if `db.userProfile.toArray()` might return stale entries from a previous session that can't be decrypted with the current key (if the user created a new account, old encrypted data with a different key might still be in IndexedDB)
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/fieldbradley/.REDACTED.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+Yes, but, we should provide a warning to the user that an existing database will be overwritten
+
+---
+
+Lets update to Sonnet 4.6 as well
+
+---
+
+commit these changes
+
+---
+
+push and open a pr
+
+---
+
+deploy to cloud run with gcloud
+
+---
+
+Remi is acting a little strange. It doesn't seem to be keeping the entire conversation. After a few back and forths, it doesn't seem to realize we've been talking and has lost previous messages.
+
+---
+
+yes, do all three
+
+---
+
+what is the link to the pr?
