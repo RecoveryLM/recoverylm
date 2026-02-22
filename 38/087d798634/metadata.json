@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "38087d798634",
+  "strategy": "manual-commit",
+  "branch": "feat/12-remi-memory",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "src/services/orchestrator.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/38/087d798634/0/metadata.json",
+      "transcript": "/38/087d798634/0/full.jsonl",
+      "context": "/38/087d798634/0/context.md",
+      "content_hash": "/38/087d798634/0/content_hash.txt",
+      "prompt": "/38/087d798634/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 644,
+    "cache_creation_tokens": 219443,
+    "cache_read_tokens": 12307641,
+    "output_tokens": 9088,
+    "api_call_count": 137
+  }
+}
