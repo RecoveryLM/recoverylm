@@ -353,6 +353,21 @@ export interface MemoryItem {
   sessionThemes?: string[]
 }
 
+export interface DailyMemory {
+  id: string
+  date: string              // YYYY-MM-DD when this memory was created
+  coveringFrom: string      // YYYY-MM-DD start of activity window
+  coveringTo: string        // YYYY-MM-DD end of activity window
+  conversationSummary?: string
+  journalSummary?: string
+  checkinSummary?: string
+  userFacts: string[]
+  followUps: string[]
+  emotionalState: string
+  notablePatterns: string[]
+  createdAt: number
+}
+
 export interface ContextWindow {
   // Static Context (from UserProfile)
   systemPrompt: string
@@ -370,6 +385,7 @@ export interface ContextWindow {
   recentSessionSummaries?: SessionSummary[]
   supportNetwork?: SupportNetwork
   activityInsights?: ActivityInsightsResult
+  dailyMemories?: DailyMemory[]
 
   // User Input
   currentMessage: string

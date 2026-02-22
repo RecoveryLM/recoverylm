@@ -168,14 +168,16 @@ export function buildTemporalContext(
  */
 export async function buildGreetingContext(): Promise<ContextWindow> {
   // Fetch data in parallel (including new context sources)
-  const [profile, metrics, guidance, recentSessionIds, activityData, previousSession, supportNetwork] = await Promise.all([
+  const [profile, metrics, guidance, recentSessionIds, activityData, previousSession, supportNetwork, dailyMemories, userFacts] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
     vault.getRecentSessions(5),
     getActivityInsights(),
     getPreviousSessionSummary(),
-    vault.getSupportNetwork()
+    vault.getSupportNetwork(),
+    vault.getDailyMemories({ limit: 5 }),
+    vault.getAllUserFacts()
   ])
 
   // Calculate derived data
@@ -187,7 +189,7 @@ export async function buildGreetingContext(): Promise<ContextWindow> {
   const activityContext = formatActivityInsights(activityData)
 
   // Determine greeting type and build instruction
-  const isFirstTime = !recentSessionIds.length || temporalContext.daysSinceSignup === 0
+  const isFirstTime = !recentSessionIds.length && temporalContext.daysSinceSignup <= 0
   const displayName = profile?.displayName || 'friend'
   const hour = new Date().getHours()
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
@@ -231,6 +233,11 @@ ${activityData.practiceGaps.length > 0 ? 'NOTE: User has enabled activities they
 `
   }
 
+  // Build user facts section from memory
+  const userFactsSection = userFacts.length > 0
+    ? `\n--- WHAT YOU KNOW ABOUT THIS USER ---\n${userFacts.map(f => `- ${f}`).join('\n')}\n`
+    : ''
+
   // Build the greeting instruction (this becomes the "currentMessage")
   const greetingInstruction = `[INTERNAL INSTRUCTION - Generate a personalized greeting for ${displayName}]
 
@@ -240,7 +247,7 @@ User type: ${isFirstTime ? 'First-time or brand new user - welcome them warmly' 
 Days sober: ${temporalContext.daysSober}
 ${milestoneNote}
 ${checkinStatus}
-${previousSessionSection}${activitySection}
+${previousSessionSection}${activitySection}${userFactsSection}
 --- GREETING GUIDELINES ---
 Generate a warm, personalized greeting (2-4 sentences) that:
 1. Uses the time of day naturally (Good morning/afternoon/evening)
@@ -271,6 +278,7 @@ Just respond with the greeting message directly.`
     temporalContext,
     supportNetwork: supportNetwork ?? undefined,
     activityInsights: activityData,
+    dailyMemories,
     currentMessage: greetingInstruction
   }
 }
@@ -284,7 +292,7 @@ export async function buildContextWindow(
   crisisContext?: { level: CrisisLevel; action: CrisisAction }
 ): Promise<ContextWindow> {
   // Fetch data in parallel
-  const [profile, metrics, guidance, recentChat, sessionSummaries, supportNetwork, activityData, relevantHistory] = await Promise.all([
+  const [profile, metrics, guidance, recentChat, sessionSummaries, supportNetwork, activityData, relevantHistory, dailyMemories] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
@@ -292,7 +300,8 @@ export async function buildContextWindow(
     getRecentSessionSummaries(2),
     vault.getSupportNetwork(),
     getActivityInsights(),
-    searchRelevantHistory(currentMessage, currentSessionId)
+    searchRelevantHistory(currentMessage, currentSessionId),
+    vault.getDailyMemories({ limit: 5 })
   ])
 
   // Calculate derived data
@@ -313,6 +322,7 @@ export async function buildContextWindow(
     recentSessionSummaries: sessionSummaries.length > 0 ? sessionSummaries : undefined,
     supportNetwork: supportNetwork ?? undefined,
     activityInsights: activityData,
+    dailyMemories,
     currentMessage,
     crisisContext
   }
