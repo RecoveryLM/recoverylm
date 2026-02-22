@@ -7,7 +7,7 @@ import { formatRecentSessionsForContext } from '../sessionSummarizer'
 import { formatActivityInsights } from '../activityInsights'
 import type { AgentTool, ToolUseBlock, ToolResultMessage } from '@/types/agent'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-4-6'
 
 // Check if we're using a proxy or direct API access
 const PROXY_URL = import.meta.env.VITE_API_PROXY_URL as string | undefined

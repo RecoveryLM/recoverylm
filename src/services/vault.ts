@@ -64,7 +64,34 @@ export async function needsSetup(): Promise<boolean> {
 /**
  * Create a new vault with a password
  */
+/**
+ * Check if the database contains existing encrypted data
+ * (e.g. from a previous vault that wasn't wiped)
+ */
+export async function hasExistingData(): Promise<boolean> {
+  const db = getDatabase()
+  const profileCount = await db.userProfile.count()
+  return profileCount > 0
+}
+
 export async function createVault(password: string): Promise<{ salt: string; recoveryPhrase: string[] }> {
+  // Clear any stale encrypted data from a previous vault.
+  // Data encrypted with the old key cannot be decrypted with the new one.
+  const db = getDatabase()
+  await Promise.all([
+    db.userProfile.clear(),
+    db.emergencyContacts.clear(),
+    db.supportNetwork.clear(),
+    db.dailyMetrics.clear(),
+    db.journalEntries.clear(),
+    db.chatMessages.clear(),
+    db.therapistGuidance.clear(),
+    db.metricsConfig.clear(),
+    db.activityLogs.clear(),
+    db.dailyPracticeConfig.clear(),
+    db.settings.clear()
+  ])
+
   const salt = generateSalt()
   const key = await deriveKey(password, salt)
 
