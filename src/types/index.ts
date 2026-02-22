@@ -344,6 +344,15 @@ export interface TemporalContext {
   timePatterns: string[] // e.g., "User often struggles on Sunday evenings"
 }
 
+export interface MemoryItem {
+  source: 'journal' | 'chat'
+  date: string
+  content: string
+  relevanceScore: number
+  tags?: JournalTag[]
+  sessionThemes?: string[]
+}
+
 export interface ContextWindow {
   // Static Context (from UserProfile)
   systemPrompt: string
@@ -356,7 +365,7 @@ export interface ContextWindow {
   recentMetrics: DailyMetric[]
   leadingIndicators: string[]
   recentConversation: ChatMessage[]
-  relevantHistory: JournalEntry[]
+  relevantHistory: MemoryItem[]
   temporalContext: TemporalContext
   recentSessionSummaries?: SessionSummary[]
   supportNetwork?: SupportNetwork

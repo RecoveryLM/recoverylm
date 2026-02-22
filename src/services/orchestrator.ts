@@ -13,7 +13,6 @@ import {
   type ContextWindow,
   type TemporalContext,
   type DailyMetric,
-  type JournalEntry,
   type CrisisLevel,
   type CrisisAction
 } from '@/types'
@@ -21,6 +20,7 @@ import * as vault from '@/services/vault'
 import { REMMI_SYSTEM_PROMPT } from '@/prompts/remmi'
 import { getPreviousSessionSummary, formatSessionSummary, getRecentSessionSummaries } from '@/services/sessionSummarizer'
 import { getActivityInsights, formatActivityInsights } from '@/services/activityInsights'
+import { searchRelevantHistory } from '@/services/memorySearch'
 
 /**
  * Calculate days between two dates
@@ -284,22 +284,20 @@ export async function buildContextWindow(
   crisisContext?: { level: CrisisLevel; action: CrisisAction }
 ): Promise<ContextWindow> {
   // Fetch data in parallel
-  const [profile, metrics, guidance, recentChat, sessionSummaries, supportNetwork, activityData] = await Promise.all([
+  const [profile, metrics, guidance, recentChat, sessionSummaries, supportNetwork, activityData, relevantHistory] = await Promise.all([
     vault.getProfile(),
     vault.getMetrics({ limit: 7 }),
     vault.getActiveGuidance(),
     vault.getChatHistory(currentSessionId),
     getRecentSessionSummaries(2),
     vault.getSupportNetwork(),
-    getActivityInsights()
+    getActivityInsights(),
+    searchRelevantHistory(currentMessage, currentSessionId)
   ])
 
   // Calculate derived data
   const leadingIndicators = detectLeadingIndicators(metrics)
   const temporalContext = buildTemporalContext(profile?.sobrietyStartDate, metrics, profile?.createdAt)
-
-  // Get relevant history (simplified - in production would do semantic search)
-  const relevantHistory: JournalEntry[] = []
 
   return {
     systemPrompt: REMMI_SYSTEM_PROMPT,

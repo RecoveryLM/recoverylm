@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Brain, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-vue-next'
+import { Brain, Lock, Eye, EyeOff, AlertCircle, AlertTriangle, Check } from 'lucide-vue-next'
 import { useVault } from '@/composables/useVault'
+import * as vault from '@/services/vault'
 
 const router = useRouter()
 const { create } = useVault()
@@ -12,8 +13,14 @@ const confirmPassword = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const isLoading = ref(false)
+const existingDataWarning = ref(false)
+const confirmedOverwrite = ref(false)
 
 const passwordStrength = ref(0)
+
+onMounted(async () => {
+  existingDataWarning.value = await vault.hasExistingData()
+})
 
 const checkPasswordStrength = () => {
   let strength = 0
@@ -38,6 +45,11 @@ const createAccount = async () => {
 
   if (password.value !== confirmPassword.value) {
     error.value = 'Passwords do not match'
+    return
+  }
+
+  if (existingDataWarning.value && !confirmedOverwrite.value) {
+    error.value = 'Please confirm that you want to overwrite existing data'
     return
   }
 
@@ -145,6 +157,28 @@ const createAccount = async () => {
         <div v-if="error" class="flex items-center gap-2 text-red-400 text-sm">
           <AlertCircle :size="16" />
           {{ error }}
+        </div>
+
+        <!-- Existing Data Warning -->
+        <div v-if="existingDataWarning" class="bg-red-900/20 border border-red-600/30 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <AlertTriangle :size="20" class="text-red-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p class="text-red-200 text-sm font-medium">Existing data found on this device</p>
+              <p class="text-red-300/70 text-sm mt-1">
+                Creating a new vault will permanently delete all existing recovery data, including
+                journal entries, chat history, and check-in records. This cannot be undone.
+              </p>
+              <label class="flex items-center gap-2 mt-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  v-model="confirmedOverwrite"
+                  class="w-4 h-4 rounded border-red-600 bg-slate-800 text-red-600 focus:ring-red-500"
+                />
+                <span class="text-red-200 text-sm">I understand, overwrite my existing data</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- Info Box -->

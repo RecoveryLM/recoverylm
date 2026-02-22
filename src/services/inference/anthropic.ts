@@ -7,7 +7,7 @@ import { formatRecentSessionsForContext } from '../sessionSummarizer'
 import { formatActivityInsights } from '../activityInsights'
 import type { AgentTool, ToolUseBlock, ToolResultMessage } from '@/types/agent'
 
-const MODEL = 'claude-sonnet-4-5'
+const MODEL = 'claude-sonnet-4-6'
 
 // Check if we're using a proxy or direct API access
 const PROXY_URL = import.meta.env.VITE_API_PROXY_URL as string | undefined
@@ -408,6 +408,23 @@ export class AnthropicProvider implements InferenceProvider {
       contextSections.push(section)
     }
 
+    // Relevant history (memory)
+    if (context.relevantHistory.length > 0) {
+      const historyLines = context.relevantHistory.map(item => {
+        const tagInfo = item.tags && item.tags.length > 0
+          ? ` [${item.tags.join(', ')}]`
+          : ''
+        return `- [${item.date}, ${item.source}${tagInfo}] "${item.content}"`
+      })
+
+      contextSections.push(
+        '## Relevant History\n' +
+        'Past journal entries and conversations that may relate to what the user is discussing. ' +
+        'Reference naturally if appropriate \u2014 don\'t list them or force connections.\n\n' +
+        historyLines.join('\n')
+      )
+    }
+
     // Support network context
     if (context.supportNetwork) {
       const { tier1, tier2, primaryPartner, backupPartner } = context.supportNetwork
@@ -462,9 +479,10 @@ export class AnthropicProvider implements InferenceProvider {
   private buildMessages(context: ContextWindow): Array<{ role: 'user' | 'assistant'; content: string }> {
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
-    // Add recent conversation history (last 10 messages)
-    // Filter out messages with empty content to avoid API errors
-    for (const msg of context.recentConversation.slice(-10)) {
+    // Add conversation history — keep up to 50 messages so Remi maintains
+    // context across longer conversations. The current user message is already
+    // included in recentConversation (saved before context is built).
+    for (const msg of context.recentConversation.slice(-50)) {
       if ((msg.role === 'user' || msg.role === 'assistant') && msg.content?.trim()) {
         messages.push({
           role: msg.role,
@@ -473,11 +491,15 @@ export class AnthropicProvider implements InferenceProvider {
       }
     }
 
-    // Add current message
-    messages.push({
-      role: 'user',
-      content: context.currentMessage
-    })
+    // If the current message isn't already the last message in the history
+    // (e.g. greeting context where recentConversation is empty), add it
+    const lastMsg = messages[messages.length - 1]
+    if (!lastMsg || lastMsg.content !== context.currentMessage) {
+      messages.push({
+        role: 'user',
+        content: context.currentMessage
+      })
+    }
 
     return messages
   }
