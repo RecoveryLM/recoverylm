@@ -19,6 +19,7 @@ const PROXY_URL = import.meta.env.VITE_API_PROXY_URL as string | undefined
 const USE_PROXY = !!PROXY_URL
 
 let client: Anthropic | null = null
+let extractionInProgress = false
 
 function getClient(): Anthropic {
   if (!client) {
@@ -58,7 +59,8 @@ interface RawActivity {
  */
 async function gatherActivity(since: string): Promise<RawActivity> {
   // Convert date string to epoch timestamp for journal/session queries
-  const sinceTimestamp = new Date(since).getTime()
+  const [year, month, day] = since.split('-').map(Number)
+  const sinceTimestamp = new Date(year, month - 1, day).getTime()
 
   // Fetch metrics, journal entries, and previous facts in parallel
   const [metrics, journalEntries, recentSessionIds, previousFacts] = await Promise.all([
@@ -114,9 +116,9 @@ function buildExtractionPrompt(activity: RawActivity): string {
 
   // Conversations
   if (activity.chatMessages.length > 0) {
-    const convoLines = activity.chatMessages.map(
-      m => `[${m.role}] ${m.content}`
-    )
+    const convoLines = activity.chatMessages
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(m => `[${m.role}] ${m.content.slice(0, 500)}`)
     sections.push(`## Conversations\n${convoLines.join('\n')}`)
   } else {
     sections.push('## Conversations\nNo conversations during this period.')
@@ -124,9 +126,9 @@ function buildExtractionPrompt(activity: RawActivity): string {
 
   // Journal entries
   if (activity.journalEntries.length > 0) {
-    const journalLines = activity.journalEntries.map(
-      e => `[${new Date(e.timestamp).toLocaleDateString()}] ${e.content}`
-    )
+    const journalLines = activity.journalEntries
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map(e => `[${new Date(e.timestamp).toLocaleDateString()}] ${e.content.slice(0, 400)}`)
     sections.push(`## Journal Entries\n${journalLines.join('\n')}`)
   } else {
     sections.push('## Journal Entries\nNo journal entries during this period.')
@@ -217,6 +219,10 @@ async function extractDailyMemory(coveringFrom: string): Promise<DailyMemory> {
   let result: ExtractionResult
   try {
     result = JSON.parse(text) as ExtractionResult
+    if (!Array.isArray(result.userFacts)) result.userFacts = []
+    if (!Array.isArray(result.followUps)) result.followUps = []
+    if (!Array.isArray(result.notablePatterns)) result.notablePatterns = []
+    if (typeof result.emotionalState !== 'string') result.emotionalState = 'Unknown'
   } catch {
     console.error('Failed to parse memory extraction JSON:', text)
     // Fall back to a minimal memory
@@ -258,6 +264,8 @@ async function extractDailyMemory(coveringFrom: string): Promise<DailyMemory> {
  * This is non-blocking — errors are logged but never thrown.
  */
 export async function runMemoryExtractionIfNeeded(): Promise<void> {
+  if (extractionInProgress) return
+  extractionInProgress = true
   try {
     const todayStr = today()
     const latest = await vault.getLatestDailyMemory()
@@ -281,5 +289,7 @@ export async function runMemoryExtractionIfNeeded(): Promise<void> {
     console.log(`[memoryExtraction] Saved daily memory covering ${coveringFrom} -> ${todayStr}`)
   } catch (error) {
     console.error('[memoryExtraction] Extraction failed (non-blocking):', error)
+  } finally {
+    extractionInProgress = false
   }
 }

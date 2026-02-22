@@ -90,6 +90,7 @@ export async function createVault(password: string): Promise<{ salt: string; rec
     db.metricsConfig.clear(),
     db.activityLogs.clear(),
     db.dailyPracticeConfig.clear(),
+    db.dailyMemories.clear(),
     db.settings.clear()
   ])
 
@@ -845,6 +846,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
       db.metricsConfig,
       db.activityLogs,
       db.dailyPracticeConfig,
+      db.dailyMemories,
       db.settings,
       db.metadata
     ], async () => {
@@ -926,6 +928,14 @@ export async function changePassword(currentPassword: string, newPassword: strin
         const decrypted = await decryptObject<DailyPracticeConfig>(entry.data, oldKey)
         const encrypted = await encryptObject(decrypted, newKey, newSalt)
         await db.dailyPracticeConfig.put({ ...entry, data: encrypted })
+      }
+
+      // Re-encrypt daily memories
+      const dailyMemories = await db.dailyMemories.toArray()
+      for (const entry of dailyMemories) {
+        const decrypted = await decryptObject<DailyMemory>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.dailyMemories.put({ ...entry, data: encrypted })
       }
 
       // Re-encrypt settings (appSettings, recoveryPhrase)
@@ -1002,6 +1012,7 @@ export async function resetPasswordWithRecoveryPhrase(phrase: string[], newPassw
       db.metricsConfig,
       db.activityLogs,
       db.dailyPracticeConfig,
+      db.dailyMemories,
       db.settings,
       db.metadata
     ], async () => {
@@ -1085,6 +1096,14 @@ export async function resetPasswordWithRecoveryPhrase(phrase: string[], newPassw
         await db.dailyPracticeConfig.put({ ...entry, data: encrypted })
       }
 
+      // Re-encrypt daily memories
+      const dailyMemories = await db.dailyMemories.toArray()
+      for (const entry of dailyMemories) {
+        const decrypted = await decryptObject<DailyMemory>(entry.data, oldKey)
+        const encrypted = await encryptObject(decrypted, newKey, newSalt)
+        await db.dailyMemories.put({ ...entry, data: encrypted })
+      }
+
       // Re-encrypt settings (appSettings, recoveryPhrase)
       const settingsEntries = await db.settings.toArray()
       for (const entry of settingsEntries) {
@@ -1131,6 +1150,7 @@ export interface BackupData {
   metricsConfig: unknown[]
   dailyPracticeConfig?: unknown[]
   activityLogs?: unknown[]
+  dailyMemories?: unknown[]
   settings?: unknown[]
   metadata: unknown[]
 }
@@ -1190,6 +1210,7 @@ export async function importBackup(backup: BackupData, password: string): Promis
       db.metricsConfig,
       db.activityLogs,
       db.dailyPracticeConfig,
+      db.dailyMemories,
       db.settings,
       db.metadata
     ], async () => {
@@ -1204,6 +1225,7 @@ export async function importBackup(backup: BackupData, password: string): Promis
       await db.metricsConfig.clear()
       await db.activityLogs.clear()
       await db.dailyPracticeConfig.clear()
+      await db.dailyMemories.clear()
       await db.settings.clear()
       await db.metadata.clear()
 
@@ -1237,6 +1259,9 @@ export async function importBackup(backup: BackupData, password: string): Promis
       }
       if (backup.dailyPracticeConfig && backup.dailyPracticeConfig.length > 0) {
         await db.dailyPracticeConfig.bulkPut(backup.dailyPracticeConfig as never[])
+      }
+      if (backup.dailyMemories && backup.dailyMemories.length > 0) {
+        await db.dailyMemories.bulkPut(backup.dailyMemories as never[])
       }
       if (backup.settings && backup.settings.length > 0) {
         await db.settings.bulkPut(backup.settings as never[])
@@ -1273,6 +1298,7 @@ export async function exportEncryptedBackup(): Promise<Blob> {
     metricsConfig: await db.metricsConfig.toArray(),
     activityLogs: await db.activityLogs.toArray(),
     dailyPracticeConfig: await db.dailyPracticeConfig.toArray(),
+    dailyMemories: await db.dailyMemories.toArray(),
     settings: await db.settings.toArray(),
     metadata: await db.metadata.toArray()
   }
