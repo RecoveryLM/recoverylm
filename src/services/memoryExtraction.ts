@@ -302,7 +302,6 @@ export async function runMemoryExtractionIfNeeded(): Promise<void> {
         const created = new Date(profile.createdAt)
         coveringFrom = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}-${String(created.getDate()).padStart(2, '0')}`
       } else {
-        // No profile or createdAt — nothing to extract
         return
       }
     }
