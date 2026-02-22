@@ -83,6 +83,14 @@ export interface EncryptedDailyPracticeConfig {
   updatedAt: number
 }
 
+export interface EncryptedDailyMemory {
+  id: string
+  date: string           // YYYY-MM-DD, indexed for queries
+  coveringTo: string     // indexed for finding latest
+  data: EncryptedPayload // Encrypted DailyMemory
+  createdAt: number
+}
+
 export interface VaultSetting {
   key: string
   value: string // JSON stringified, some settings may be encrypted
@@ -109,6 +117,7 @@ export class RecoveryLMDatabase extends Dexie {
   metricsConfig!: Table<EncryptedMetricsConfig>
   activityLogs!: Table<EncryptedActivityLog>
   dailyPracticeConfig!: Table<EncryptedDailyPracticeConfig>
+  dailyMemories!: Table<EncryptedDailyMemory>
   settings!: Table<VaultSetting>
   metadata!: Table<VaultMetadata>
 
@@ -169,6 +178,22 @@ export class RecoveryLMDatabase extends Dexie {
       metricsConfig: 'id, updatedAt',
       activityLogs: 'id, activityId, completedAt',
       dailyPracticeConfig: 'id, updatedAt',
+      settings: 'key',
+      metadata: 'key'
+    })
+
+    this.version(5).stores({
+      userProfile: 'id, updatedAt',
+      emergencyContacts: 'id, updatedAt',
+      supportNetwork: 'id, tier, updatedAt',
+      dailyMetrics: 'date, updatedAt',
+      journalEntries: 'id, sessionId, timestamp, *tags',
+      chatMessages: 'id, sessionId, timestamp, role',
+      therapistGuidance: 'id, category, active, updatedAt',
+      metricsConfig: 'id, updatedAt',
+      activityLogs: 'id, activityId, completedAt',
+      dailyPracticeConfig: 'id, updatedAt',
+      dailyMemories: 'id, date, coveringTo, createdAt',
       settings: 'key',
       metadata: 'key'
     })
