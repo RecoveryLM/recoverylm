@@ -479,9 +479,10 @@ export class AnthropicProvider implements InferenceProvider {
   private buildMessages(context: ContextWindow): Array<{ role: 'user' | 'assistant'; content: string }> {
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
-    // Add recent conversation history (last 10 messages)
-    // Filter out messages with empty content to avoid API errors
-    for (const msg of context.recentConversation.slice(-10)) {
+    // Add conversation history — keep up to 50 messages so Remi maintains
+    // context across longer conversations. The current user message is already
+    // included in recentConversation (saved before context is built).
+    for (const msg of context.recentConversation.slice(-50)) {
       if ((msg.role === 'user' || msg.role === 'assistant') && msg.content?.trim()) {
         messages.push({
           role: msg.role,
@@ -490,11 +491,15 @@ export class AnthropicProvider implements InferenceProvider {
       }
     }
 
-    // Add current message
-    messages.push({
-      role: 'user',
-      content: context.currentMessage
-    })
+    // If the current message isn't already the last message in the history
+    // (e.g. greeting context where recentConversation is empty), add it
+    const lastMsg = messages[messages.length - 1]
+    if (!lastMsg || lastMsg.content !== context.currentMessage) {
+      messages.push({
+        role: 'user',
+        content: context.currentMessage
+      })
+    }
 
     return messages
   }
