@@ -235,8 +235,14 @@ ${activityData.practiceGaps.length > 0 ? 'NOTE: User has enabled activities they
 
   // Build user facts section from memory
   const userFactsSection = userFacts.length > 0
-    ? `\n--- WHAT YOU KNOW ABOUT THIS USER ---\n${userFacts.map(f => `- ${f}`).join('\n')}\n`
+    ? `\n--- WHAT YOU KNOW ABOUT THIS USER ---\nThese facts come from previous conversations and should be trusted over computed values.\n${userFacts.map(f => `- ${f}`).join('\n')}\n`
     : ''
+
+  // If memory facts mention sobriety days, prefer that over the computed value
+  const sobrietyFact = userFacts.find(f => /sober|sobriety|clean/i.test(f))
+  const daysSoberDisplay = sobrietyFact
+    ? `Per user's own report: ${sobrietyFact}`
+    : `Days sober: ${temporalContext.daysSober}`
 
   // Build the greeting instruction (this becomes the "currentMessage")
   const greetingInstruction = `[INTERNAL INSTRUCTION - Generate a personalized greeting for ${displayName}]
@@ -244,7 +250,7 @@ ${activityData.practiceGaps.length > 0 ? 'NOTE: User has enabled activities they
 --- BASIC CONTEXT ---
 Time: ${timeOfDay} on ${temporalContext.dayOfWeek}
 User type: ${isFirstTime ? 'First-time or brand new user - welcome them warmly' : 'Returning user'}
-Days sober: ${temporalContext.daysSober}
+${daysSoberDisplay}
 ${milestoneNote}
 ${checkinStatus}
 ${previousSessionSection}${activitySection}${userFactsSection}
@@ -252,7 +258,7 @@ ${previousSessionSection}${activitySection}${userFactsSection}
 Generate a warm, personalized greeting (2-4 sentences) that:
 1. Uses the time of day naturally (Good morning/afternoon/evening)
 2. ${isFirstTime ? 'Welcomes them to the app and introduces yourself briefly' : 'Acknowledges they\'re back'}
-3. ${milestoneNote ? 'Celebrates their milestone with genuine warmth' : temporalContext.daysSober > 0 ? `Optionally mentions their ${temporalContext.daysSober} days of progress` : 'Offers encouragement for their journey'}
+3. ${sobrietyFact ? 'May acknowledge their sobriety progress based on the user facts above' : milestoneNote ? 'Celebrates their milestone with genuine warmth' : temporalContext.daysSober > 0 ? `Optionally mentions their ${temporalContext.daysSober} days of progress` : 'Offers encouragement for their journey'}
 4. ${previousSession?.endState === 'unresolved' ? 'Gently checks in about how they\'re doing since last time' : leadingIndicators.length > 0 ? 'Gently checks in (leading indicators suggest they may need support)' : 'Invites conversation naturally'}
 5. ${activityData.suggestedActivities.length > 0 && !isFirstTime ? 'May naturally mention an available activity if contextually appropriate (but don\'t force it)' : ''}
 
