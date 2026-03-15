@@ -11,9 +11,14 @@
     --border: 51 65 85;         /* slate-700 RGB */
   }
 
-  /* Ensure full height on mobile */
+  /* Ensure full height on mobile — use min-height so pages taller
+     than the viewport (e.g. landing page) can scroll naturally on
+     mobile touch browsers and in PWA standalone mode. */
   html, body {
-    height: 100%;
+    min-height: 100%;
+    touch-action: manipulation;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   #app {

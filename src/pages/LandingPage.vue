@@ -53,7 +53,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-canvas text-slate-300 antialiased selection:bg-indigo-500/30 selection:text-white overflow-x-hidden">
+  <div class="min-h-screen bg-canvas text-slate-300 antialiased selection:bg-indigo-500/30 selection:text-white">
     <!-- Navbar -->
     <nav class="fixed top-0 w-full z-50 border-b border-slate-800 bg-canvas/80 backdrop-blur-md">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
