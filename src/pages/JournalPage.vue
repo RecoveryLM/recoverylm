@@ -324,14 +324,14 @@ onMounted(async () => {
             <button
               @click="saveEntry"
               :disabled="!entryContent.trim() || isSaving"
-              class="flex-1 py-3 px-4 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="flex-1 py-3 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-semibold transition-colors"
             >
               {{ isSaving ? 'Saving...' : 'Save Entry' }}
             </button>
             <button
               @click="analyzeWithRemi"
               :disabled="!entryContent.trim() || isSaving"
-              class="flex-1 py-3 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-semibold transition-colors flex items-center justify-center gap-2"
+              class="flex-1 py-3 px-4 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               <Send :size="18" />
               {{ isSaving ? 'Saving...' : 'Analyze with Remi' }}
