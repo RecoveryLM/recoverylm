@@ -76,7 +76,7 @@ const complete = () => {
 </script>
 
 <template>
-  <div class="widget-container p-4 my-3 max-w-lg w-full">
+  <div class="widget-container p-4 my-3 max-w-full w-full">
     <!-- Header -->
     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
       <h3 class="text-purple-400 font-bold flex items-center gap-2">
@@ -108,7 +108,7 @@ const complete = () => {
             <p class="text-slate-300 text-sm line-through">{{ thoughtInput }}</p>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-3 [&>*]:min-w-0">
             <div class="p-2 bg-red-900/10 border border-red-500/20 rounded">
               <div class="text-red-400 text-xs mb-1">Evidence For ({{ evidenceFor.length }})</div>
               <ul class="text-xs text-slate-400 space-y-0.5">
@@ -156,7 +156,7 @@ const complete = () => {
       </div>
 
       <!-- Evidence Grid -->
-      <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="grid grid-cols-2 gap-3 mb-4 [&>*]:min-w-0">
         <!-- Evidence FOR the thought -->
         <div class="p-3 bg-red-900/10 border border-red-500/20 rounded-lg">
           <h4 class="text-red-400 text-sm font-medium mb-2">Evidence FOR</h4>

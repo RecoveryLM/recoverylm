@@ -66,7 +66,7 @@ const getContactIcon = (method: string) => {
 </script>
 
 <template>
-  <div class="widget-container p-4 my-3 max-w-md w-full">
+  <div class="widget-container p-4 my-3 max-w-full w-full">
     <!-- Header -->
     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
       <h3 class="text-pink-400 font-bold flex items-center gap-2">
