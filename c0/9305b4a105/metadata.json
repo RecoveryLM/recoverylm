@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "c09305b4a105",
+  "strategy": "manual-commit",
+  "branch": "fix/27-widget-overflow-chat-view",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "src/components/widgets/CheckinWidget.vue",
+    "src/components/widgets/CommitmentWidget.vue",
+    "src/components/widgets/DentsWidget.vue",
+    "src/components/widgets/EvidenceWidget.vue",
+    "src/components/widgets/GratitudeWidget.vue",
+    "src/components/widgets/NetworkWidget.vue",
+    "src/components/widgets/SelfAppreciationWidget.vue",
+    "src/components/widgets/StoicWidget.vue",
+    "src/components/widgets/TapeWidget.vue",
+    "src/components/widgets/ThoughtLogWidget.vue",
+    "src/components/widgets/UrgeSurfWidget.vue",
+    "src/components/widgets/WidgetRenderer.vue"
+  ],
+  "sessions": [
+    {
+      "metadata": "/c0/9305b4a105/0/metadata.json",
+      "transcript": "/c0/9305b4a105/0/full.jsonl",
+      "context": "/c0/9305b4a105/0/context.md",
+      "content_hash": "/c0/9305b4a105/0/content_hash.txt",
+      "prompt": "/c0/9305b4a105/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 78,
+    "cache_creation_tokens": 76541,
+    "cache_read_tokens": 2472808,
+    "output_tokens": 14865,
+    "api_call_count": 52
+  }
+}

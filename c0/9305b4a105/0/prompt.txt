@@ -1,0 +1,461 @@
+fetch the open issues on github and let's figure out which one to work next
+
+---
+
+ok, check out a bug branch for #5 and get started. Also, there is an ongong issue with the landing page for the app on mobile, which doesn't scroll unless forcefully swiped up, or the phone is tilted horizontally and then back up.
+
+---
+
+<task-notification>
+<task-id>a3d03f076376901f9</task-id>
+<tool-use-id>toolu_0189Ht8ejKpq9chSAQBnqn4q</tool-use-id>
+<output-file>REDACTED.output</output-file>
+<status>completed</status>
+<summary>Agent "Investigate mobile scroll bug on landing page" completed</summary>
+<result>I now have a complete understanding of the issue. Here is my analysis.
+
+---
+
+## Root Cause Analysis: Mobile Scroll Bug on Landing Page
+
+### Files Involved
+
+1. `/Users/fieldbradley/Projects/recoverylm/src/assets/styles/main.css` (lines 15-21) -- **primary culprit**
+2. `/Users/fieldbradley/Projects/recoverylm/index.html` (line 6) -- contributing factor in PWA context
+3. `/Users/fieldbradley/Projects/recoverylm/vite.config.ts` (line 32) -- PWA `standalone` mode amplifies the problem
+
+### The Problem
+
+The root cause is in `main.css` at lines 15-21:
+
+```css
+html, body {
+  height: 100%;
+}
+
+#app {
+  min-height: 100%;
+}
+```
+
+Setting `height: 100%` on both `html` and `body` constrains the document to exactly the viewport height. On desktop browsers, this is generally harmless because the content naturally overflows and the browser still allows scrolling. However, on **mobile Safari and mobile Chrome** (especially in PWA standalone mode), this creates a scroll-locking effect:
+
+1. The `body` is told it is exactly 100% of the viewport tall.
+2. The landing page content inside `#app` is significantly taller than the viewport (hero, features, framework, privacy, disclaimer, and footer sections).
+3. Mobile browsers interpret the fixed-height `body` as defining the scrollable boundary. When the content overflows a `height: 100%` body, mobile touch scrolling becomes unreliable -- the browser's scroll gesture detection gets confused because the "document" height and the "content" height disagree.
+4. The PWA manifest sets `display: 'standalone'` and `orientation: 'portrait'`, which removes the browser chrome. In standalone mode, iOS Safari uses different scroll mechanics, and the `height: 100%` constraint becomes even more problematic.
+
+This explains the exact symptoms described:
+- **Forceful swipe required**: The touch scroll gesture needs to overcome the browser's confusion about whether the body is scrollable.
+- **Rotating the phone fixes it**: When orientation changes, the browser recalculates the viewport and layout, which temporarily resolves the height constraint conflict. When rotated back, the recalculation persists until the next layout invalidation.
+
+The `MainLayout.vue` uses `h-screen` (which is `height: 100vh`) and `overflow-hidden` intentionally for the app shell pages (chat, dashboard, etc.) where the individual pages manage their own scrolling. That is correct for those pages. But the landing page is rendered **outside** `MainLayout.vue` (it's a top-level route), so the global `html, body { height: 100% }` is the constraint that matters.
+
+### Recommended Fix
+
+**In `/Users/fieldbradley/Projects/recoverylm/src/assets/styles/main.css`**, change the `html, body` rule to use `min-height` instead of `height`, and keep the `#app` rule as-is:
+
+```css
+html, body {
+  min-height: 100%;
+}
+```
+
+This single change ensures:
+- The `html` and `body` elements are **at least** viewport height (so short pages like unlock/setup still fill the screen with the dark background).
+- When content is taller than the viewport (like the landing page), the body naturally expands to fit, and mobile touch scrolling works correctly.
+- The app shell pages under `MainLayout.vue` are unaffected because they use explicit `h-screen` and `overflow-hidden` on their own wrapper elements, which independently constrains their height.
+
+Alternatively, if there is concern about edge cases, a more targeted approach would be to keep `height: 100%` but add `overflow-y: auto` to `body`. However, `min-height: 100%` is the cleaner and more standard solution -- it is the universally recommended approach for mobile-friendly full-height layouts.
+
+No changes are needed to the landing page component itself (`LandingPage.vue`), the `index.html`, or the `App.vue`. The issue is purely in the global CSS constraint.
+
+### Severity
+
+**Critical** -- This prevents basic navigation of the landing page on mobile devices, which is the first page new users see. It directly impacts user acquisition.</result>
+<usage><total_tokens>27423</total_tokens><tool_uses>24</tool_uses><duration_ms>63641</duration_ms></usage>
+</task-notification>
+Full transcript available at: REDACTED.output
+
+---
+
+let's test
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+I'm still having trouble scrolling vertically on mobile. Something it's like I have to really forcefully scroll; just swipping won't scroll down.
+
+---
+
+that worked. commit, push, and open a pr
+
+---
+
+## Context
+
+- Current git status: On branch fix/5-blank-chat-greeting-failure
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   src/assets/styles/main.css
+	modified:   src/composables/useChat.ts
+	modified:   src/pages/LandingPage.vue
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.claude/
+	.entire/
+	RecoveryLM-Roadmap.md
+	docs/plans/2026-02-21-remi-memory-design.md
+	docs/plans/2026-02-21-remi-memory-plan.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+- Current git diff (staged and unstaged changes): diff --git a/src/assets/styles/main.css b/src/assets/styles/main.css
+index aefd2d7..e77d7e8 100644
+--- a/src/assets/styles/main.css
++++ b/src/assets/styles/main.css
+@@ -11,9 +11,14 @@
+     --border: 51 65 85;         /* slate-700 RGB */
+   }
+ 
+-  /* Ensure full height on mobile */
++  /* Ensure full height on mobile — use min-height so pages taller
++     than the viewport (e.g. landing page) can scroll naturally on
++     mobile touch browsers and in PWA standalone mode. */
+   html, body {
+-    height: 100%;
++    min-height: 100%;
++    touch-action: manipulation;
++    overscroll-behavior: contain;
++    -webkit-overflow-scrolling: touch;
+   }
+ 
+   #app {
+diff --git a/src/composables/useChat.ts b/src/composables/useChat.ts
+index ae4c6e9..aae2d63 100644
+--- a/src/composables/useChat.ts
++++ b/src/composables/useChat.ts
+@@ -413,7 +413,18 @@ export function useChat() {
+           isGeneratingGreeting.value = false
+         }
+       })
+-    } catch {
++    } catch (e) {
++      console.error('Failed to generate greeting:', e)
++
++      // Remove the empty placeholder message if it was added
++      if (streamingMessageId.value) {
++        const msgIndex = messages.value.findIndex(m => m.id === streamingMessageId.value)
++        if (msgIndex !== -1) {
++          messages.value.splice(msgIndex, 1)
++        }
++      }
++
++      error.value = 'Failed to connect. Please check your connection and try again.'
+       isStreaming.value = false
+       streamingMessageId.value = null
+       isGeneratingGreeting.value = false
+diff --git a/src/pages/LandingPage.vue b/src/pages/LandingPage.vue
+index 63e59fa..a46d810 100644
+--- a/src/pages/LandingPage.vue
++++ b/src/pages/LandingPage.vue
+@@ -53,7 +53,7 @@ onUnmounted(() => {
+ </script>
+ 
+ <template>
+-  <div class="min-h-screen bg-canvas text-slate-300 antialiased selection:bg-indigo-500/30 selection:text-white overflow-x-hidden">
++  <div class="min-h-screen bg-canvas text-slate-300 antialiased selection:bg-indigo-500/30 selection:text-white">
+     <!-- Navbar -->
+     <nav class="fixed top-0 w-full z-50 border-b border-slate-800 bg-canvas/80 backdrop-blur-md">
+       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+- Current branch: fix/5-blank-chat-greeting-failure
+
+## Your task
+
+Based on the above changes:
+
+1. Create a new branch if on main
+2. Create a single commit with an appropriate message
+3. Push the branch to origin
+4. Create a pull request using `gh pr create`
+5. You have the capability to call multiple tools in a single response. You MUST do all of the above in a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
+
+---
+
+now deploy to cloud run
+
+---
+
+checkout out main and pull
+
+---
+
+create a github but issue for the following: Some of the widgets are overflowing or not displaying text correctly in the chat view.
+
+---
+
+check out a bug branch for that now
+
+---
+
+Here is an example. You see that the "Situation" text box isn't wrapping, and the input text boxes are also overflowing below that.
+
+---
+
+commit and push and open pr
+
+---
+
+## Context
+
+- Current git status: On branch fix/27-widget-overflow-chat-view
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   src/components/widgets/CheckinWidget.vue
+	modified:   src/components/widgets/CommitmentWidget.vue
+	modified:   src/components/widgets/DentsWidget.vue
+	modified:   src/components/widgets/EvidenceWidget.vue
+	modified:   src/components/widgets/GratitudeWidget.vue
+	modified:   src/components/widgets/NetworkWidget.vue
+	modified:   src/components/widgets/SelfAppreciationWidget.vue
+	modified:   src/components/widgets/StoicWidget.vue
+	modified:   src/components/widgets/TapeWidget.vue
+	modified:   src/components/widgets/ThoughtLogWidget.vue
+	modified:   src/components/widgets/UrgeSurfWidget.vue
+	modified:   src/components/widgets/WidgetRenderer.vue
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.claude/
+	.entire/
+	RecoveryLM-Roadmap.md
+	docs/plans/2026-02-21-remi-memory-design.md
+	docs/plans/2026-02-21-remi-memory-plan.md
+
+no changes added to commit (use "git add" and/or "git commit -a")
+- Current git diff (staged and unstaged changes): diff --git a/src/components/widgets/CheckinWidget.vue b/src/components/widgets/CheckinWidget.vue
+index ac9f5e3..5e4a4de 100644
+--- a/src/components/widgets/CheckinWidget.vue
++++ b/src/components/widgets/CheckinWidget.vue
+@@ -144,7 +144,7 @@ const complete = async () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-emerald-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/CommitmentWidget.vue b/src/components/widgets/CommitmentWidget.vue
+index 20773da..87f2273 100644
+--- a/src/components/widgets/CommitmentWidget.vue
++++ b/src/components/widgets/CommitmentWidget.vue
+@@ -73,7 +73,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-indigo-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/DentsWidget.vue b/src/components/widgets/DentsWidget.vue
+index def49a2..28caf35 100644
+--- a/src/components/widgets/DentsWidget.vue
++++ b/src/components/widgets/DentsWidget.vue
+@@ -122,7 +122,7 @@ const logOutcome = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-indigo-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/EvidenceWidget.vue b/src/components/widgets/EvidenceWidget.vue
+index 87e127e..6f66c20 100644
+--- a/src/components/widgets/EvidenceWidget.vue
++++ b/src/components/widgets/EvidenceWidget.vue
+@@ -76,7 +76,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-lg w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-purple-400 font-bold flex items-center gap-2">
+@@ -108,7 +108,7 @@ const complete = () => {
+             <p class="text-slate-300 text-sm line-through">{{ thoughtInput }}</p>
+           </div>
+ 
+-          <div class="grid grid-cols-2 gap-3">
++          <div class="grid grid-cols-2 gap-3 [&>*]:min-w-0">
+             <div class="p-2 bg-red-900/10 border border-red-500/20 rounded">
+               <div class="text-red-400 text-xs mb-1">Evidence For ({{ evidenceFor.length }})</div>
+               <ul class="text-xs text-slate-400 space-y-0.5">
+@@ -156,7 +156,7 @@ const complete = () => {
+       </div>
+ 
+       <!-- Evidence Grid -->
+-      <div class="grid grid-cols-2 gap-3 mb-4">
++      <div class="grid grid-cols-2 gap-3 mb-4 [&>*]:min-w-0">
+         <!-- Evidence FOR the thought -->
+         <div class="p-3 bg-red-900/10 border border-red-500/20 rounded-lg">
+           <h4 class="text-red-400 text-sm font-medium mb-2">Evidence FOR</h4>
+diff --git a/src/components/widgets/GratitudeWidget.vue b/src/components/widgets/GratitudeWidget.vue
+index 5aada4f..5102032 100644
+--- a/src/components/widgets/GratitudeWidget.vue
++++ b/src/components/widgets/GratitudeWidget.vue
+@@ -58,7 +58,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-lg w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-emerald-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/NetworkWidget.vue b/src/components/widgets/NetworkWidget.vue
+index 6c280c7..6697da9 100644
+--- a/src/components/widgets/NetworkWidget.vue
++++ b/src/components/widgets/NetworkWidget.vue
+@@ -66,7 +66,7 @@ const getContactIcon = (method: string) => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-pink-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/SelfAppreciationWidget.vue b/src/components/widgets/SelfAppreciationWidget.vue
+index e3b4c68..f7172f3 100644
+--- a/src/components/widgets/SelfAppreciationWidget.vue
++++ b/src/components/widgets/SelfAppreciationWidget.vue
+@@ -91,7 +91,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-lg w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-amber-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/StoicWidget.vue b/src/components/widgets/StoicWidget.vue
+index 1406fbc..13c7299 100644
+--- a/src/components/widgets/StoicWidget.vue
++++ b/src/components/widgets/StoicWidget.vue
+@@ -68,7 +68,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-lg w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-cyan-400 font-bold flex items-center gap-2">
+@@ -103,7 +103,7 @@ const complete = () => {
+           Focus your energy on what you can control. Accept what you cannot.
+         </p>
+ 
+-        <div class="grid grid-cols-2 gap-3 text-left">
++        <div class="grid grid-cols-2 gap-3 text-left [&>*]:min-w-0">
+           <div class="p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg">
+             <div class="text-emerald-400 text-xs font-medium mb-2">Focus On ({{ canControl.length }})</div>
+             <ul class="text-sm text-slate-300 space-y-1">
+@@ -132,7 +132,7 @@ const complete = () => {
+     </Transition>
+ 
+     <!-- Two Columns -->
+-    <div v-if="!showSummary" class="grid grid-cols-2 gap-3">
++    <div v-if="!showSummary" class="grid grid-cols-2 gap-3 [&>*]:min-w-0">
+       <!-- Can Control Column -->
+       <div class="p-3 bg-emerald-900/10 border border-emerald-500/20 rounded-lg">
+         <h4 class="text-emerald-400 text-sm font-medium mb-2">What I CAN Control</h4>
+diff --git a/src/components/widgets/TapeWidget.vue b/src/components/widgets/TapeWidget.vue
+index cb18b90..f40acb4 100644
+--- a/src/components/widgets/TapeWidget.vue
++++ b/src/components/widgets/TapeWidget.vue
+@@ -73,7 +73,7 @@ const complete = () => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-amber-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/ThoughtLogWidget.vue b/src/components/widgets/ThoughtLogWidget.vue
+index 5f019ba..568af16 100644
+--- a/src/components/widgets/ThoughtLogWidget.vue
++++ b/src/components/widgets/ThoughtLogWidget.vue
+@@ -124,7 +124,7 @@ const disputePrompts = [
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-lg w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-indigo-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/UrgeSurfWidget.vue b/src/components/widgets/UrgeSurfWidget.vue
+index c378e33..fe723b0 100644
+--- a/src/components/widgets/UrgeSurfWidget.vue
++++ b/src/components/widgets/UrgeSurfWidget.vue
+@@ -244,7 +244,7 @@ onUnmounted(() => {
+ </script>
+ 
+ <template>
+-  <div class="widget-container p-4 my-3 max-w-md w-full">
++  <div class="widget-container p-4 my-3 max-w-full w-full">
+     <!-- Header -->
+     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+       <h3 class="text-blue-400 font-bold flex items-center gap-2">
+diff --git a/src/components/widgets/WidgetRenderer.vue b/src/components/widgets/WidgetRenderer.vue
+index fad6a04..7325942 100644
+--- a/src/components/widgets/WidgetRenderer.vue
++++ b/src/components/widgets/WidgetRenderer.vue
+@@ -36,7 +36,7 @@ const handleComplete = (result: unknown) => {
+ </script>
+ 
+ <template>
+-  <div v-if="component" class="widget-wrapper">
++  <div v-if="component" class="widget-wrapper overflow-hidden">
+     <Suspense>
+       <component
+         :is="component"
+@@ -45,7 +45,7 @@ const handleComplete = (result: unknown) => {
+         @complete="handleComplete"
+       />
+       <template #fallback>
+-        <div class="widget-container p-4 my-3 max-w-md w-full animate-pulse">
++        <div class="widget-container p-4 my-3 max-w-full w-full animate-pulse">
+           <div class="h-4 bg-slate-700 rounded w-1/3 mb-4"></div>
+           <div class="h-20 bg-slate-700 rounded mb-2"></div>
+           <div class="h-8 bg-slate-700 rounded w-1/4 ml-auto"></div>
+@@ -53,7 +53,7 @@ const handleComplete = (result: unknown) => {
+       </template>
+     </Suspense>
+   </div>
+-  <div v-else class="widget-container p-4 my-3 max-w-md w-full border-red-500/30">
++  <div v-else class="widget-container p-4 my-3 max-w-full w-full border-red-500/30">
+     <p class="text-red-400 text-sm">Unknown widget: {{ widget.id }}</p>
+   </div>
+ </template>
+- Current branch: fix/27-widget-overflow-chat-view
+
+## Your task
+
+Based on the above changes:
+
+1. Create a new branch if on main
+2. Create a single commit with an appropriate message
+3. Push the branch to origin
+4. Create a pull request using `gh pr create`
+5. You have the capability to call multiple tools in a single response. You MUST do all of the above in a single message. Do not use any other tools or do anything else. Do not send any other text or messages besides these tool calls.
