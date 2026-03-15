@@ -123,11 +123,11 @@ const statusContainerClass = computed(() => {
 const statusMessage = computed(() => {
   switch (systemStatus.value) {
     case 'nominal':
-      return `System Nominal. ${sobrietyStreak.value} Day Streak.`
+      return `You're doing well — ${sobrietyStreak.value} day streak and counting.`
     case 'drift':
-      return `Drift Detected. ${leadingIndicators.value.length} Leading Indicator${leadingIndicators.value.length > 1 ? 's' : ''} Active.`
+      return `Heads up — a few of your patterns have shifted recently.`
     case 'critical':
-      return 'Support Protocol Recommended.'
+      return 'It looks like a tough stretch. Reaching out could help.'
   }
 })
 
@@ -530,7 +530,7 @@ const goToCommitment = () => {
       >
         <div class="flex items-center gap-3">
           <div class="w-3 h-3 rounded-full" :class="statusDotClass"></div>
-          <span class="font-mono text-sm text-slate-200">{{ statusMessage }}</span>
+          <span class="text-sm text-slate-200">{{ statusMessage }}</span>
         </div>
       </div>
 
@@ -541,7 +541,7 @@ const goToCommitment = () => {
       >
         <div class="flex items-center gap-3">
           <div class="w-3 h-3 rounded-full bg-slate-500"></div>
-          <span class="font-mono text-sm text-slate-400">No metrics tracked yet. Complete your first check-in to see system status.</span>
+          <span class="text-sm text-slate-400">Welcome! Complete your first check-in to start tracking your progress.</span>
         </div>
       </div>
 
@@ -591,10 +591,10 @@ const goToCommitment = () => {
       >
         <h3 class="text-amber-500 font-semibold flex items-center gap-2 mb-2">
           <AlertTriangle :size="18" />
-          Risk Analysis: Leading Indicators Detected
+          Something to be aware of
         </h3>
         <p class="text-slate-300 text-sm mb-3">
-          Your metrics suggest a drift in discipline. The IRF identifies this as a high-risk window for rationalization.
+          A few of your patterns have shifted this week. This is a good time to check in with yourself and lean on your supports.
         </p>
         <ul class="space-y-2">
           <li
