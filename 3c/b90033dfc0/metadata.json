@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "3cb90033dfc0",
+  "strategy": "manual-commit",
+  "branch": "fix/5-blank-chat-greeting-failure",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "src/assets/styles/main.css",
+    "src/composables/useChat.ts",
+    "src/pages/LandingPage.vue"
+  ],
+  "sessions": [
+    {
+      "metadata": "/3c/b90033dfc0/0/metadata.json",
+      "transcript": "/3c/b90033dfc0/0/full.jsonl",
+      "context": "/3c/b90033dfc0/0/context.md",
+      "content_hash": "/3c/b90033dfc0/0/content_hash.txt",
+      "prompt": "/3c/b90033dfc0/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 37,
+    "cache_creation_tokens": 48911,
+    "cache_read_tokens": 837628,
+    "output_tokens": 6135,
+    "api_call_count": 24
+  }
+}

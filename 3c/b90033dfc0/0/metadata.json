@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "3cb90033dfc0",
+  "session_id": "476bc2ad-856f-4b17-b51c-0697dff1456d",
+  "strategy": "manual-commit",
+  "created_at": "2026-03-15T09:35:46.058068Z",
+  "branch": "fix/5-blank-chat-greeting-failure",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "src/assets/styles/main.css",
+    "src/composables/useChat.ts",
+    "src/pages/LandingPage.vue"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "6599cc81dc9c",
+  "transcript_identifier_at_start": "aaca9559-c1cc-4cfa-9857-182f08110c25",
+  "token_usage": {
+    "input_tokens": 37,
+    "cache_creation_tokens": 48911,
+    "cache_read_tokens": 837628,
+    "output_tokens": 6135,
+    "api_call_count": 24
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-03-15T09:35:45.955522Z",
+    "agent_lines": 20,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 20,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-Users-fieldbradley-Projects-recoverylm/476bc2ad-856f-4b17-b51c-0697dff1456d.jsonl"
+}
