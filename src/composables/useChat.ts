@@ -413,7 +413,18 @@ export function useChat() {
           isGeneratingGreeting.value = false
         }
       })
-    } catch {
+    } catch (e) {
+      console.error('Failed to generate greeting:', e)
+
+      // Remove the empty placeholder message if it was added
+      if (streamingMessageId.value) {
+        const msgIndex = messages.value.findIndex(m => m.id === streamingMessageId.value)
+        if (msgIndex !== -1) {
+          messages.value.splice(msgIndex, 1)
+        }
+      }
+
+      error.value = 'Failed to connect. Please check your connection and try again.'
       isStreaming.value = false
       streamingMessageId.value = null
       isGeneratingGreeting.value = false
