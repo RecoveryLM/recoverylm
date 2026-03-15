@@ -393,6 +393,25 @@ const connectionStatusClass = computed(() => {
   return 'text-amber-400'
 })
 
+// ============================================
+// Personal Greeting
+// ============================================
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+  const name = profile.value?.displayName
+  return name ? `Good ${timeOfDay}, ${name}` : `Good ${timeOfDay}`
+})
+
+const todayDateLabel = computed(() => {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+})
+
 const connectionStatusText = computed(() => {
   if (pillar2Status.value.daysAgo === null) return 'Not tracked'
   if (pillar2Status.value.daysAgo === 0) return 'Today'
@@ -495,6 +514,12 @@ const goToCommitment = () => {
     </div>
 
     <div v-else class="space-y-6 animate-fade-in">
+      <!-- Personal Greeting -->
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-100">{{ greeting }}</h1>
+        <p class="text-sm text-slate-400 mt-1">{{ todayDateLabel }}</p>
+      </div>
+
       <!-- System Status Indicator (HUD) -->
       <div
         v-if="recentMetrics.length > 0"
