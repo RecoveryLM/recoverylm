@@ -36,7 +36,7 @@ const handleComplete = (result: unknown) => {
 </script>
 
 <template>
-  <div v-if="component" class="widget-wrapper">
+  <div v-if="component" class="widget-wrapper overflow-hidden">
     <Suspense>
       <component
         :is="component"
@@ -45,7 +45,7 @@ const handleComplete = (result: unknown) => {
         @complete="handleComplete"
       />
       <template #fallback>
-        <div class="widget-container p-4 my-3 max-w-md w-full animate-pulse">
+        <div class="widget-container p-4 my-3 max-w-full w-full animate-pulse">
           <div class="h-4 bg-slate-700 rounded w-1/3 mb-4"></div>
           <div class="h-20 bg-slate-700 rounded mb-2"></div>
           <div class="h-8 bg-slate-700 rounded w-1/4 ml-auto"></div>
@@ -53,7 +53,7 @@ const handleComplete = (result: unknown) => {
       </template>
     </Suspense>
   </div>
-  <div v-else class="widget-container p-4 my-3 max-w-md w-full border-red-500/30">
+  <div v-else class="widget-container p-4 my-3 max-w-full w-full border-red-500/30">
     <p class="text-red-400 text-sm">Unknown widget: {{ widget.id }}</p>
   </div>
 </template>

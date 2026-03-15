@@ -68,7 +68,7 @@ const complete = () => {
 </script>
 
 <template>
-  <div class="widget-container p-4 my-3 max-w-lg w-full">
+  <div class="widget-container p-4 my-3 max-w-full w-full">
     <!-- Header -->
     <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
       <h3 class="text-cyan-400 font-bold flex items-center gap-2">
@@ -103,7 +103,7 @@ const complete = () => {
           Focus your energy on what you can control. Accept what you cannot.
         </p>
 
-        <div class="grid grid-cols-2 gap-3 text-left">
+        <div class="grid grid-cols-2 gap-3 text-left [&>*]:min-w-0">
           <div class="p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg">
             <div class="text-emerald-400 text-xs font-medium mb-2">Focus On ({{ canControl.length }})</div>
             <ul class="text-sm text-slate-300 space-y-1">
@@ -132,7 +132,7 @@ const complete = () => {
     </Transition>
 
     <!-- Two Columns -->
-    <div v-if="!showSummary" class="grid grid-cols-2 gap-3">
+    <div v-if="!showSummary" class="grid grid-cols-2 gap-3 [&>*]:min-w-0">
       <!-- Can Control Column -->
       <div class="p-3 bg-emerald-900/10 border border-emerald-500/20 rounded-lg">
         <h4 class="text-emerald-400 text-sm font-medium mb-2">What I CAN Control</h4>
